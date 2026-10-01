@@ -12,12 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.chaprode.mobile.ui.AuthViewModel
 import com.chaprode.mobile.ui.FixtureViewModel
+import com.chaprode.mobile.ui.auth.AuthViewModel
+import com.chaprode.mobile.ui.auth.LoginScreen
+import com.chaprode.mobile.ui.auth.RegisterScreen
+import com.chaprode.mobile.ui.navigation.Screen
 import com.chaprode.mobile.ui.screens.FixtureScreen
 import com.chaprode.mobile.ui.screens.HomeScreen
-import com.chaprode.mobile.ui.screens.LoginScreen
-import com.chaprode.mobile.ui.screens.RegisterScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,33 +40,32 @@ fun ChaProdeApp() {
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        NavHost(navController = navController, startDestination = "login") {
-            composable("login") {
+        NavHost(navController = navController, startDestination = Screen.Login.route) {
+            composable(Screen.Login.route) {
                 LoginScreen(
                     viewModel = authViewModel,
-                    onNavigateToRegister = { navController.navigate("register") },
-                    onLoginSuccess = { navController.navigate("home") }
+                    onNavigateToRegister = { navController.navigate(Screen.Register.route) },
+                    onLoginSuccess = { navController.navigate(Screen.Home.route) }
                 )
             }
-            composable("register") {
+            composable(Screen.Register.route) {
                 RegisterScreen(
-                    viewModel = authViewModel,
                     onNavigateToLogin = { navController.popBackStack() },
-                    onRegisterSuccess = { navController.navigate("home") }
+                    onRegisterSuccess = { navController.navigate(Screen.Home.route) }
                 )
             }
-            composable("home") {
+            composable(Screen.Home.route) {
                 HomeScreen(
                     viewModel = authViewModel,
-                    onNavigateToFixture = { navController.navigate("fixture") },
+                    onNavigateToFixture = { navController.navigate(Screen.Fixture.route) },
                     onLogout = {
-                        navController.navigate("login") {
-                            popUpTo("home") { inclusive = true }
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
                         }
                     }
                 )
             }
-            composable("fixture") {
+            composable(Screen.Fixture.route) {
                 FixtureScreen(
                     viewModel = fixtureViewModel,
                     torneoId = "d96b16df-448a-43ca-9fa7-140af2e63e14",

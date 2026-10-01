@@ -4,6 +4,7 @@ import com.chaprode.config.DatabaseFactory
 import com.chaprode.dto.ApiResponse
 import com.chaprode.routes.authRoutes
 import com.chaprode.routes.healthRoutes
+import com.chaprode.routes.predictionRoutes
 import com.chaprode.routes.tournamentRoutes
 import com.chaprode.security.JwtConfig
 import io.ktor.http.*
@@ -110,5 +111,6 @@ fun Application.module() {
         healthRoutes()
         authRoutes()
         tournamentRoutes()
+        predictionRoutes()
     }
 }

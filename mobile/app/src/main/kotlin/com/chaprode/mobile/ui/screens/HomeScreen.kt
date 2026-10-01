@@ -16,9 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chaprode.mobile.model.AuthState
 import com.chaprode.mobile.model.User
-import com.chaprode.mobile.ui.AuthViewModel
+import com.chaprode.mobile.ui.auth.AuthViewModel
 
 @Composable
 fun HomeScreen(
@@ -26,8 +25,8 @@ fun HomeScreen(
     onNavigateToFixture: () -> Unit = {},
     onLogout: () -> Unit
 ) {
-    val authState by viewModel.authState.collectAsState()
-    val user = (authState as? AuthState.Authenticated)?.user
+    val state by viewModel.uiState.collectAsState()
+    val user = state.user
 
     HomeContent(
         user = user,
