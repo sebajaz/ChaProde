@@ -1,0 +1,96 @@
+{
+  "torneo": {
+    "nombre": "Copa Mundial FIFA 2026",
+    "codigoExterno": "WC2026",
+    "logoUrl": "https://upload.wikimedia.org/wikipedia/en/thumb/1/10/2026_FIFA_World_Cup_logo.svg/240px-2026_FIFA_World_Cup_logo.svg.png",
+    "fechaInicio": "2026-06-11T19:00:00Z",
+    "fechaFin": "2026-07-19T22:00:00Z"
+  },
+  "equipos": [
+    {
+      "nombre": "Argentina",
+      "codigoExterno": "ARG",
+      "urlBandera": "https://flagcdn.com/w160/ar.png",
+      "codigoIso": "AR"
+    },
+    {
+      "nombre": "Brasil",
+      "codigoExterno": "BRA",
+      "urlBandera": "https://flagcdn.com/w160/br.png",
+      "codigoIso": "BR"
+    },
+    {
+      "nombre": "Francia",
+      "codigoExterno": "FRA",
+      "urlBandera": "https://flagcdn.com/w160/fr.png",
+      "codigoIso": "FR"
+    },
+    {
+      "nombre": "España",
+      "codigoExterno": "ESP",
+      "urlBandera": "https://flagcdn.com/w160/es.png",
+      "codigoIso": "ES"
+    },
+    {
+      "nombre": "Alemania",
+      "codigoExterno": "GER",
+      "urlBandera": "https://flagcdn.com/w160/de.png",
+      "codigoIso": "DE"
+    },
+    {
+      "nombre": "Uruguay",
+      "codigoExterno": "URU",
+      "urlBandera": "https://flagcdn.com/w160/uy.png",
+      "codigoIso": "UY"
+    },
+    {
+      "nombre": "México",
+      "codigoExterno": "MEX",
+      "urlBandera": "https://flagcdn.com/w160/mx.png",
+      "codigoIso": "MX"
+    },
+    {
+      "nombre": "Estados Unidos",
+      "codigoExterno": "USA",
+      "urlBandera": "https://flagcdn.com/w160/us.png",
+      "codigoIso": "US"
+    }
+  ],
+  "partidos": [
+    {
+      "codigoExterno": "MATCH-01",
+      "equipoLocalCodigo": "ARG",
+      "equipoVisitanteCodigo": "MEX",
+      "fechaPartido": "2026-06-11T20:00:00Z",
+      "estado": "PENDIENTE"
+    },
+    {
+      "codigoExterno": "MATCH-02",
+      "equipoLocalCodigo": "BRA",
+      "equipoVisitanteCodigo": "URU",
+      "fechaPartido": "2026-06-12T17:00:00Z",
+      "estado": "PENDIENTE"
+    },
+    {
+      "codigoExterno": "MATCH-03",
+      "equipoLocalCodigo": "ESP",
+      "equipoVisitanteCodigo": "GER",
+      "fechaPartido": "2026-06-12T21:00:00Z",
+      "estado": "PENDIENTE"
+    },
+    {
+      "codigoExterno": "MATCH-04",
+      "equipoLocalCodigo": "FRA",
+      "equipoVisitanteCodigo": "USA",
+      "fechaPartido": "2026-06-13T18:00:00Z",
+      "estado": "PENDIENTE"
+    },
+    {
+      "codigoExterno": "MATCH-05",
+      "equipoLocalCodigo": "ARG",
+      "equipoVisitanteCodigo": "BRA",
+      "fechaPartido": "2026-06-18T20:00:00Z",
+      "estado": "PENDIENTE"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+# Build and Gradle
+.gradle/
+*/.gradle/
+build/
+*/build/
+*/*/build/
+.kotlin/
+*/.kotlin/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android
+local.properties
+*/local.properties
+*.apk
+*.aab
+captures/
+.externalNativeBuild/
+
+# Database local data
+database/pgdata/
+pgdata/
+
+# Node / Web
+node_modules/
+*/node_modules/
+dist/
+*/dist/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# IDE & Editors
+.idea/
+*/.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# OS files & logs
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+
+# Environment variables
+.env
+.env.*
+!.env.example
