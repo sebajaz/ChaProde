@@ -108,4 +108,57 @@ class MatchRepository {
             it[PartidosTable.codigoExterno] = codigoExterno?.trim()
         }.value
     }
+
+    suspend fun settleMatchResult(
+        partidoId: UUID,
+        golesLocal: Int,
+        golesVisitante: Int,
+        estado: String = "FINALIZADO"
+    ): com.chaprode.dto.MatchResultResponse = dbQuery {
+        // 1. Actualizar resultado del partido
+        PartidosTable.update({ PartidosTable.id eq partidoId }) {
+            it[PartidosTable.golesLocal] = golesLocal
+            it[PartidosTable.golesVisitante] = golesVisitante
+            it[PartidosTable.estado] = estado
+        }
+
+        // 2. Obtener todos los pronósticos registrados para este partido
+        val predictions = com.chaprode.models.PronosticosTable
+            .selectAll()
+            .where { com.chaprode.models.PronosticosTable.partidoId eq partidoId }
+            .toList()
+
+        var totalPuntos = 0
+        val now = kotlinx.datetime.Clock.System.now()
+
+        // 3. Liquidar y asignar puntos a cada pronóstico
+        for (row in predictions) {
+            val predId = row[com.chaprode.models.PronosticosTable.id]
+            val predLocal = row[com.chaprode.models.PronosticosTable.golesLocalPredicho]
+            val predVisitante = row[com.chaprode.models.PronosticosTable.golesVisitantePredicho]
+
+            val puntos = com.chaprode.services.ScoringEngine.calculatePoints(
+                predLocal = predLocal,
+                predVisitante = predVisitante,
+                realLocal = golesLocal,
+                realVisitante = golesVisitante
+            )
+
+            totalPuntos += puntos
+
+            com.chaprode.models.PronosticosTable.update({ com.chaprode.models.PronosticosTable.id eq predId }) {
+                it[puntosGanados] = puntos
+                it[updatedAt] = now
+            }
+        }
+
+        com.chaprode.dto.MatchResultResponse(
+            partidoId = partidoId.toString(),
+            golesLocal = golesLocal,
+            golesVisitante = golesVisitante,
+            estado = estado,
+            totalPronosticosLiquidados = predictions.size,
+            totalPuntosOtorgados = totalPuntos
+        )
+    }
 }

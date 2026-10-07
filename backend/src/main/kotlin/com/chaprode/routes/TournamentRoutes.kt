@@ -62,6 +62,24 @@ fun Route.tournamentRoutes(tournamentService: TournamentService = TournamentServ
                 val matchId = tournamentService.createMatch(request)
                 call.respond(HttpStatusCode.Created, ApiResponse.ok(mapOf("id" to matchId), "Partido creado exitosamente"))
             }
+
+            post("/partidos/{id}/resultado") {
+                val matchId = call.parameters["id"]
+                    ?: throw IllegalArgumentException("Parámetro 'id' del partido faltante.")
+                val request = call.receive<SetMatchResultRequest>()
+                val matchUuid = java.util.UUID.fromString(matchId)
+                val matchRepo = com.chaprode.repositories.MatchRepository()
+                val result = matchRepo.settleMatchResult(
+                    partidoId = matchUuid,
+                    golesLocal = request.golesLocal,
+                    golesVisitante = request.golesVisitante,
+                    estado = request.estado
+                )
+                call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse.ok(result, "Resultado registrado y pronósticos liquidados exitosamente")
+                )
+            }
         }
     }
 }
