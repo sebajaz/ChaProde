@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.chaprode.mobile.ui.FixtureViewModel
 import com.chaprode.mobile.ui.auth.AuthViewModel
 import com.chaprode.mobile.ui.auth.LoginScreen
 import com.chaprode.mobile.ui.auth.RegisterScreen
 import com.chaprode.mobile.ui.navigation.Screen
+import com.chaprode.mobile.ui.prediction.PredictionViewModel
 import com.chaprode.mobile.ui.screens.FixtureScreen
 import com.chaprode.mobile.ui.screens.HomeScreen
 
@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
 fun ChaProdeApp() {
     val navController = rememberNavController()
     val authViewModel = AuthViewModel()
-    val fixtureViewModel = FixtureViewModel()
+    val predictionViewModel = PredictionViewModel()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -67,7 +67,7 @@ fun ChaProdeApp() {
             }
             composable(Screen.Fixture.route) {
                 FixtureScreen(
-                    viewModel = fixtureViewModel,
+                    viewModel = predictionViewModel,
                     torneoId = "d96b16df-448a-43ca-9fa7-140af2e63e14",
                     torneoNombre = "Copa Mundial FIFA 2026",
                     onNavigateBack = { navController.popBackStack() }
