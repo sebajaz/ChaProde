@@ -17,8 +17,10 @@ import com.chaprode.mobile.ui.auth.LoginScreen
 import com.chaprode.mobile.ui.auth.RegisterScreen
 import com.chaprode.mobile.ui.navigation.Screen
 import com.chaprode.mobile.ui.prediction.PredictionViewModel
+import com.chaprode.mobile.ui.ranking.RankingViewModel
 import com.chaprode.mobile.ui.screens.FixtureScreen
 import com.chaprode.mobile.ui.screens.HomeScreen
+import com.chaprode.mobile.ui.screens.RankingScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +37,7 @@ fun ChaProdeApp() {
     val navController = rememberNavController()
     val authViewModel = AuthViewModel()
     val predictionViewModel = PredictionViewModel()
+    val rankingViewModel = RankingViewModel()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -58,6 +61,7 @@ fun ChaProdeApp() {
                 HomeScreen(
                     viewModel = authViewModel,
                     onNavigateToFixture = { navController.navigate(Screen.Fixture.route) },
+                    onNavigateToRanking = { navController.navigate(Screen.Ranking.route) },
                     onLogout = {
                         navController.navigate(Screen.Login.route) {
                             popUpTo(Screen.Home.route) { inclusive = true }
@@ -68,6 +72,14 @@ fun ChaProdeApp() {
             composable(Screen.Fixture.route) {
                 FixtureScreen(
                     viewModel = predictionViewModel,
+                    torneoId = "d96b16df-448a-43ca-9fa7-140af2e63e14",
+                    torneoNombre = "Copa Mundial FIFA 2026",
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Ranking.route) {
+                RankingScreen(
+                    viewModel = rankingViewModel,
                     torneoId = "d96b16df-448a-43ca-9fa7-140af2e63e14",
                     torneoNombre = "Copa Mundial FIFA 2026",
                     onNavigateBack = { navController.popBackStack() }

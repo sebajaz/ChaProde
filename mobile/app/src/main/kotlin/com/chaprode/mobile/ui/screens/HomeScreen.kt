@@ -23,6 +23,7 @@ import com.chaprode.mobile.ui.auth.AuthViewModel
 fun HomeScreen(
     viewModel: AuthViewModel,
     onNavigateToFixture: () -> Unit = {},
+    onNavigateToRanking: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -31,6 +32,7 @@ fun HomeScreen(
     HomeContent(
         user = user,
         onNavigateToFixture = onNavigateToFixture,
+        onNavigateToRanking = onNavigateToRanking,
         onLogout = {
             viewModel.logout()
             onLogout()
@@ -43,6 +45,7 @@ fun HomeScreen(
 fun HomeContent(
     user: User? = null,
     onNavigateToFixture: () -> Unit = {},
+    onNavigateToRanking: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     Scaffold(
@@ -156,6 +159,7 @@ fun HomeContent(
                 }
 
                 Card(
+                    onClick = onNavigateToRanking,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
