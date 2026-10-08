@@ -76,7 +76,7 @@ fun ChaProdeApp() {
             composable(Screen.Fixture.route) {
                 FixtureScreen(
                     viewModel = predictionViewModel,
-                    torneoId = "d96b16df-448a-43ca-9fa7-140af2e63e14",
+                    torneoId = "activo",
                     torneoNombre = "Copa Mundial FIFA 2026",
                     onNavigateBack = { navController.popBackStack() }
                 )
@@ -84,7 +84,7 @@ fun ChaProdeApp() {
             composable(Screen.Ranking.route) {
                 RankingScreen(
                     viewModel = rankingViewModel,
-                    torneoId = "d96b16df-448a-43ca-9fa7-140af2e63e14",
+                    torneoId = "activo",
                     torneoNombre = "Copa Mundial FIFA 2026",
                     onNavigateBack = { navController.popBackStack() }
                 )

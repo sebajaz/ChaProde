@@ -11,6 +11,7 @@ class LeagueService(
 
     private val random = SecureRandom()
     private val allowedChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // Excluimos 0, O, 1, I para evitar confusiones visuales
+    private val tournamentService = TournamentService()
 
     suspend fun createLeague(userId: String, request: CreateLeagueRequest): LeagueDto {
         val userUuid = try {
@@ -19,11 +20,7 @@ class LeagueService(
             throw IllegalArgumentException("Identificador de usuario inválido.")
         }
 
-        val torneoUuid = try {
-            UUID.fromString(request.torneoId)
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Identificador de torneo inválido.")
-        }
+        val torneoUuid = tournamentService.resolveTournamentUuid(request.torneoId)
 
         val leagueName = request.nombre.trim()
         if (leagueName.length < 3 || leagueName.length > 50) {

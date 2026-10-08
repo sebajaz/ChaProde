@@ -18,22 +18,55 @@ class TournamentService(
         return tournamentRepository.getAllActiveTournaments()
     }
 
-    suspend fun getTournamentById(id: String): TournamentDto {
-        val uuid = try {
-            UUID.fromString(id)
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Identificador de torneo inválido.")
+    suspend fun resolveTournamentUuid(identifier: String?): UUID {
+        val trimmed = identifier?.trim()
+        if (trimmed.isNullOrBlank() || 
+            trimmed.equals("activo", ignoreCase = true) || 
+            trimmed.equals("default", ignoreCase = true) || 
+            trimmed.equals("current", ignoreCase = true)) {
+            val active = tournamentRepository.getAllActiveTournaments().firstOrNull()
+                ?: throw IllegalArgumentException("No hay torneos activos disponibles.")
+            return UUID.fromString(active.id)
         }
+
+        // 1. Si es un UUID válido y existe en la base de datos
+        val parsedUuid = try {
+            UUID.fromString(trimmed)
+        } catch (e: Exception) {
+            null
+        }
+
+        if (parsedUuid != null) {
+            val exists = tournamentRepository.getTournamentById(parsedUuid)
+            if (exists != null) {
+                return parsedUuid
+            }
+        }
+
+        // 2. Buscar por código externo (ej: "WC2026")
+        val byCode = tournamentRepository.findTournamentByCodigoExterno(trimmed)
+        if (byCode != null) {
+            return UUID.fromString(byCode.id)
+        }
+
+        // 3. Fallback inteligente: si se pasó un UUID previo que ya no existe (por ejemplo, re-seed del servidor),
+        // pero existe un torneo activo en la base de datos, utilizar el torneo activo para evitar que la UI quede en blanco.
+        val fallback = tournamentRepository.getAllActiveTournaments().firstOrNull()
+        if (fallback != null) {
+            return UUID.fromString(fallback.id)
+        }
+
+        throw IllegalArgumentException("Torneo no encontrado para '$identifier'.")
+    }
+
+    suspend fun getTournamentById(id: String): TournamentDto {
+        val uuid = resolveTournamentUuid(id)
         return tournamentRepository.getTournamentById(uuid)
             ?: throw IllegalArgumentException("Torneo no encontrado.")
     }
 
     suspend fun getMatchesByTournament(torneoId: String): List<MatchDto> {
-        val uuid = try {
-            UUID.fromString(torneoId)
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Identificador de torneo inválido.")
-        }
+        val uuid = resolveTournamentUuid(torneoId)
         return matchRepository.getMatchesByTournament(uuid)
     }
 

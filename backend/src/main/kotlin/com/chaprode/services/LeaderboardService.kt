@@ -8,15 +8,12 @@ import java.util.*
 
 class LeaderboardService(
     private val leaderboardRepository: LeaderboardRepository = LeaderboardRepository(),
-    private val tournamentRepository: TournamentRepository = TournamentRepository()
+    private val tournamentRepository: TournamentRepository = TournamentRepository(),
+    private val tournamentService: TournamentService = TournamentService()
 ) {
 
     suspend fun getTournamentLeaderboard(torneoId: String): TournamentLeaderboardResponse {
-        val uuid = try {
-            UUID.fromString(torneoId)
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Identificador de torneo inválido.")
-        }
+        val uuid = tournamentService.resolveTournamentUuid(torneoId)
 
         val torneo = tournamentRepository.getTournamentById(uuid)
             ?: throw IllegalArgumentException("El torneo especificado no existe.")

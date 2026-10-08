@@ -64,8 +64,8 @@ class LeagueViewModel(
         val name = _uiState.value.newLeagueName.trim()
         if (name.isBlank()) return
 
-        // Por defecto torneo Mundial 2026
-        val defaultTorneoId = "d96b16df-448a-43ca-9fa7-140af2e63e14"
+        // Por defecto torneo Mundial 2026 activo
+        val defaultTorneoId = "activo"
 
         viewModelScope.launch {
             repository.createLeague(name, defaultTorneoId).collect { resource ->

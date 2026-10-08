@@ -30,7 +30,7 @@ import com.chaprode.mobile.ui.ranking.RankingViewModel
 @Composable
 fun RankingScreen(
     viewModel: RankingViewModel,
-    torneoId: String = "d96b16df-448a-43ca-9fa7-140af2e63e14",
+    torneoId: String = "activo",
     torneoNombre: String = "Copa Mundial FIFA 2026",
     onNavigateBack: () -> Unit
 ) {

@@ -12,7 +12,8 @@ import kotlin.time.Duration.Companion.minutes
 
 class PredictionService(
     private val predictionRepository: PredictionRepository = PredictionRepository(),
-    private val matchRepository: MatchRepository = MatchRepository()
+    private val matchRepository: MatchRepository = MatchRepository(),
+    private val tournamentService: TournamentService = TournamentService()
 ) {
 
     suspend fun submitPrediction(userId: String, request: SubmitPredictionRequest): PredictionDto {
@@ -59,13 +60,13 @@ class PredictionService(
 
     suspend fun getMyPredictions(userId: String, torneoId: String): List<PredictionDto> {
         val userUuid = UUID.fromString(userId)
-        val torneoUuid = UUID.fromString(torneoId)
+        val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
         return predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
     }
 
     suspend fun getMatchesWithMyPredictions(userId: String, torneoId: String): List<MatchWithPredictionDto> {
         val userUuid = UUID.fromString(userId)
-        val torneoUuid = UUID.fromString(torneoId)
+        val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
 
         val matches = matchRepository.getMatchesByTournament(torneoUuid)
         val myPredictions = predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
