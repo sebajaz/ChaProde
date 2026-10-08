@@ -84,10 +84,34 @@ fun Route.tournamentRoutes(
 
             post("/partidos/{id}/resultado") {
                 val matchId = call.parameters["id"]
-                    ?: throw IllegalArgumentException("Parámetro 'id' del partido faltante.")
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, ApiResponse.error<Unit>("Parámetro 'id' del partido faltante."))
+                val matchUuid = try {
+                    java.util.UUID.fromString(matchId)
+                } catch (e: Exception) {
+                    return@post call.respond(HttpStatusCode.BadRequest, ApiResponse.error<Unit>("ID de partido inválido."))
+                }
+
                 val request = call.receive<SetMatchResultRequest>()
-                val matchUuid = java.util.UUID.fromString(matchId)
                 val matchRepo = com.chaprode.repositories.MatchRepository()
+                val match = matchRepo.getMatchById(matchUuid)
+                    ?: return@post call.respond(HttpStatusCode.NotFound, ApiResponse.error<Unit>("Partido no encontrado."))
+
+                // Regla 1: No se pueden modificar los resultados de partidos finalizados traídos por la API
+                if (match.estado == "FINALIZADO" && !match.codigoExterno.isNullOrBlank()) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        ApiResponse.error<Unit>("No se pueden modificar los resultados de partidos finalizados provistos por la API externa.")
+                    )
+                }
+
+                // Regla 2: No se pueden cargar resultados en partidos pendientes
+                if (match.estado == "PENDIENTE") {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        ApiResponse.error<Unit>("No se pueden cargar resultados a partidos en estado PENDIENTE. El partido debe iniciar o estar EN_JUEGO primero.")
+                    )
+                }
+
                 val result = matchRepo.settleMatchResult(
                     partidoId = matchUuid,
                     golesLocal = request.golesLocal,
@@ -97,6 +121,33 @@ fun Route.tournamentRoutes(
                 call.respond(
                     HttpStatusCode.OK,
                     ApiResponse.ok(result, "Resultado registrado y pronósticos liquidados exitosamente")
+                )
+            }
+
+            post("/partidos/{id}/iniciar") {
+                val matchId = call.parameters["id"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, ApiResponse.error<Unit>("Parámetro 'id' del partido faltante."))
+                val matchUuid = try {
+                    java.util.UUID.fromString(matchId)
+                } catch (e: Exception) {
+                    return@post call.respond(HttpStatusCode.BadRequest, ApiResponse.error<Unit>("ID de partido inválido."))
+                }
+
+                val matchRepo = com.chaprode.repositories.MatchRepository()
+                val match = matchRepo.getMatchById(matchUuid)
+                    ?: return@post call.respond(HttpStatusCode.NotFound, ApiResponse.error<Unit>("Partido no encontrado."))
+
+                if (match.estado != "PENDIENTE") {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        ApiResponse.error<Unit>("Solo los partidos en estado PENDIENTE pueden ser iniciados.")
+                    )
+                }
+
+                matchRepo.updateMatchStatus(matchUuid, "EN_JUEGO")
+                call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse.ok(mapOf("id" to matchId, "estado" to "EN_JUEGO"), "Partido iniciado exitosamente (estado EN_JUEGO).")
                 )
             }
 

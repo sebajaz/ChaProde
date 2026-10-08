@@ -74,6 +74,13 @@ export const api = {
     throw new Error(res.data.error || 'Error al liquidar el resultado');
   },
 
+  startMatch: async (matchId: string): Promise<void> => {
+    const res = await apiClient.post<ApiResponse<any>>(`/admin/partidos/${matchId}/iniciar`);
+    if (!res.data.success) {
+      throw new Error(res.data.error || 'Error al iniciar el partido');
+    }
+  },
+
   // Ranking
   getTournamentLeaderboard: async (torneoId: string): Promise<LeaderboardEntry[]> => {
     if (torneoId === 'todos' || torneoId === 'all') {

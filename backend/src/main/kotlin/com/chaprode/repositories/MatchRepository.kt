@@ -123,6 +123,12 @@ class MatchRepository {
         }
     }
 
+    suspend fun updateMatchStatus(partidoId: UUID, nuevoEstado: String): Unit = dbQuery {
+        PartidosTable.update({ PartidosTable.id eq partidoId }) {
+            it[PartidosTable.estado] = nuevoEstado
+        }
+    }
+
     suspend fun getMatchByExternalCode(codigoExterno: String): MatchDto? = dbQuery {
         val localEquipos = EquiposTable.alias("local_equipos")
         val visitanteEquipos = EquiposTable.alias("visitante_equipos")

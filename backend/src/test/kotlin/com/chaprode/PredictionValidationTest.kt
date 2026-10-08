@@ -50,4 +50,30 @@ class PredictionValidationTest {
         assertFalse(isPredictionAllowed(matchTime, currentTime, "EN_JUEGO"))
         assertFalse(isPredictionAllowed(matchTime, currentTime, "FINALIZADO"))
     }
+
+    // Reglas de Administración de Resultados
+    private fun isManualResultSettlementAllowed(estado: String, codigoExterno: String?): Boolean {
+        // Regla 1: No se pueden cargar resultados en partidos pendientes
+        if (estado == "PENDIENTE") return false
+        // Regla 2: No se pueden modificar resultados de partidos finalizados traídos por la API
+        if (estado == "FINALIZADO" && !codigoExterno.isNullOrBlank()) return false
+        return true
+    }
+
+    @Test
+    fun `carga de resultado bloqueada si el partido esta en estado PENDIENTE`() {
+        assertFalse(isManualResultSettlementAllowed("PENDIENTE", null), "No debe permitirse cargar resultado a partido manual PENDIENTE")
+        assertFalse(isManualResultSettlementAllowed("PENDIENTE", "FD-12345"), "No debe permitirse cargar resultado a partido de la API PENDIENTE")
+    }
+
+    @Test
+    fun `modificacion de resultado bloqueada si el partido es FINALIZADO y proviene de la API`() {
+        assertFalse(isManualResultSettlementAllowed("FINALIZADO", "FD-99999"), "Debe bloquearse modificacion de partido finalizado de la API")
+    }
+
+    @Test
+    fun `carga de resultado permitida cuando el partido esta EN JUEGO`() {
+        assertTrue(isManualResultSettlementAllowed("EN_JUEGO", null), "Debe permitirse cargar resultado cuando esta EN_JUEGO")
+        assertTrue(isManualResultSettlementAllowed("EN_JUEGO", "FD-55555"), "Debe permitirse cargar resultado de partido en juego")
+    }
 }

@@ -15,7 +15,8 @@ import {
   Sparkles, 
   Zap, 
   Radio, 
-  Globe 
+  Globe,
+  Lock 
 } from 'lucide-react';
 import { api } from './services/api';
 import { Match, Tournament, LeaderboardEntry, User } from './types';
@@ -144,15 +145,56 @@ export function App() {
     }
   };
 
+  const handleStartMatch = async (matchId: string) => {
+    try {
+      await api.startMatch(matchId);
+      setActionMessage({
+        text: '¡Partido iniciado! Pasó a estado EN JUEGO y ahora es posible registrar marcadores.',
+        type: 'success'
+      });
+      await loadInitialData(selectedTournamentId);
+    } catch (err: any) {
+      setActionMessage({ text: err.message || 'Error al iniciar el partido', type: 'error' });
+    }
+  };
+
   const openSettleModal = (match: Match) => {
+    if (match.estado === 'FINALIZADO' && match.codigoExterno) {
+      setActionMessage({
+        text: 'Los partidos finalizados traídos por la API están protegidos y no pueden modificarse manualmente.',
+        type: 'error'
+      });
+      return;
+    }
+    if (match.estado === 'PENDIENTE') {
+      setActionMessage({
+        text: 'No se pueden cargar resultados a partidos en estado PENDIENTE. El partido debe iniciar primero.',
+        type: 'error'
+      });
+      return;
+    }
     setSelectedMatch(match);
     setInputLocalGoals(match.golesLocal ?? 0);
     setInputVisitorGoals(match.golesVisitante ?? 0);
-    setMatchStatus(match.estado === 'PENDIENTE' ? 'FINALIZADO' : match.estado);
+    setMatchStatus(match.estado === 'EN_JUEGO' ? 'FINALIZADO' : match.estado);
   };
 
   const handleSettleMatch = async () => {
     if (!selectedMatch) return;
+    if (selectedMatch.estado === 'FINALIZADO' && selectedMatch.codigoExterno) {
+      setActionMessage({
+        text: 'Los partidos finalizados traídos por la API están protegidos y no pueden modificarse manualmente.',
+        type: 'error'
+      });
+      return;
+    }
+    if (selectedMatch.estado === 'PENDIENTE') {
+      setActionMessage({
+        text: 'No se pueden cargar resultados a partidos en estado PENDIENTE.',
+        type: 'error'
+      });
+      return;
+    }
     try {
       setIsSettling(true);
       const res = await api.settleMatchResult(
@@ -530,12 +572,47 @@ export function App() {
                           </span>
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <button
-                            onClick={() => openSettleModal(m)}
-                            className="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
-                          >
-                            {m.estado === 'FINALIZADO' ? 'Modificar' : 'Cargar Resultado'}
-                          </button>
+                          {/* CASO 1: PARTIDO FINALIZADO DE LA API -> ESTRICTAMENTE BLOQUEADO */}
+                          {m.estado === 'FINALIZADO' && m.codigoExterno ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800/80 text-emerald-400 border border-slate-700/60"
+                              title="Resultado oficial sincronizado por la API externa. Bloqueado contra modificaciones manuales."
+                            >
+                              <Lock className="w-3 h-3 text-emerald-400" />
+                              <span>Oficial API</span>
+                            </span>
+                          ) : m.estado === 'PENDIENTE' ? (
+                            /* CASO 2: PARTIDO PENDIENTE -> NO SE PUEDE CARGAR RESULTADO */
+                            m.codigoExterno ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-850 text-slate-500 border border-slate-800 cursor-not-allowed"
+                                title="No se pueden cargar resultados a partidos pendientes. Esperando inicio oficial del encuentro."
+                              >
+                                <Clock className="w-3 h-3 text-slate-500" />
+                                <span>Esperando Inicio</span>
+                              </span>
+                            ) : (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <span className="text-[10px] text-slate-500 font-medium">Pendiente</span>
+                                <button
+                                  onClick={() => handleStartMatch(m.id)}
+                                  className="inline-flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold px-2 py-1 rounded-lg text-[11px] transition shadow-sm"
+                                  title="Iniciar partido local (cambia a EN JUEGO para poder cargar resultado)"
+                                >
+                                  <Play className="w-2.5 h-2.5 fill-amber-300" /> Iniciar
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            /* CASO 3: EN_JUEGO (O FINALIZADO MANUAL) -> PERMITE CARGAR RESULTADO */
+                            <button
+                              onClick={() => openSettleModal(m)}
+                              className="inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {m.estado === 'FINALIZADO' ? 'Modificar' : 'Cargar Resultado'}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
