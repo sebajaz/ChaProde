@@ -96,10 +96,9 @@ export const api = {
     return res.data.data || [];
   },
 
-  // Sincronización Automática con API de Deportes (Opción 3 Híbrida)
-  syncMatchesWithApi: async (modo?: 'live' | 'simular', torneoId?: string): Promise<import('../types').SyncSummary> => {
+  // Sincronización Automática con API de Deportes Real
+  syncMatchesWithApi: async (torneoId?: string): Promise<import('../types').SyncSummary> => {
     const params = new URLSearchParams();
-    if (modo) params.append('modo', modo);
     if (torneoId && torneoId !== 'todos' && torneoId !== 'all') params.append('torneoId', torneoId);
     const queryString = params.toString();
     const url = queryString ? `/admin/partidos/sincronizar?${queryString}` : '/admin/partidos/sincronizar';
@@ -108,18 +107,5 @@ export const api = {
       return res.data.data;
     }
     throw new Error(res.data.error || 'Error al sincronizar con la API de deportes');
-  },
-
-  simulateMatch: async (partidoId: string, golesLocal: number, golesVisitante: number): Promise<MatchResultResponse> => {
-    const res = await apiClient.post<ApiResponse<MatchResultResponse>>('/admin/partidos/simular', {
-      partidoId,
-      golesLocal,
-      golesVisitante,
-      estado: 'FINALIZADO',
-    });
-    if (res.data.success && res.data.data) {
-      return res.data.data;
-    }
-    throw new Error(res.data.error || 'Error al simular el partido');
   },
 };

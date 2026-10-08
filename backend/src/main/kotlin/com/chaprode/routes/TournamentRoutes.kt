@@ -151,13 +151,11 @@ fun Route.tournamentRoutes(
                 )
             }
 
-            // Sincronización Automática / On-Demand con API Deportiva (Opción 3 Híbrida)
+            // Sincronización Automática / On-Demand con API Deportiva Oficial
             post("/partidos/sincronizar") {
-                val modo = call.request.queryParameters["modo"]
                 val torneoId = call.request.queryParameters["torneoId"]
                 val dateFrom = call.request.queryParameters["dateFrom"]
                 val dateTo = call.request.queryParameters["dateTo"]
-                val forceSimulator = modo.equals("simular", ignoreCase = true)
 
                 val torneoUuid = if (!torneoId.isNullOrBlank() && !torneoId.equals("todos", ignoreCase = true) && !torneoId.equals("all", ignoreCase = true)) {
                     tournamentService.resolveTournamentUuid(torneoId)
@@ -165,21 +163,10 @@ fun Route.tournamentRoutes(
 
                 val summary = matchSyncService.syncMatches(
                     torneoId = torneoUuid,
-                    forceSimulator = forceSimulator,
                     dateFrom = dateFrom,
                     dateTo = dateTo
                 )
                 call.respond(HttpStatusCode.OK, ApiResponse.ok(summary, summary.mensaje))
-            }
-
-            // Simulación puntual de resultado para pruebas / demostración
-            post("/partidos/simular") {
-                val request = call.receive<SimulateMatchRequest>()
-                val result = matchSyncService.simulateSingleMatch(request)
-                call.respond(
-                    HttpStatusCode.OK,
-                    ApiResponse.ok(result, "Partido simulado y pronósticos liquidados exitosamente.")
-                )
             }
         }
     }

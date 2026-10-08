@@ -18,8 +18,7 @@ import kotlin.time.Duration.Companion.days
 class MatchSyncService(
     private val matchRepository: MatchRepository = MatchRepository(),
     private val tournamentRepository: TournamentRepository = TournamentRepository(),
-    private val apiClient: SportsDataProvider = FootballDataApiClient(),
-    val simulator: FootballDataSimulator = FootballDataSimulator()
+    private val apiClient: SportsDataProvider = FootballDataApiClient()
 ) {
 
     private val log = LoggerFactory.getLogger(MatchSyncService::class.java)
@@ -30,27 +29,17 @@ class MatchSyncService(
         dateFrom: String? = null,
         dateTo: String? = null
     ): SyncSummaryDto {
-        // 1. Obtener partidos mundiales (desde API de deportes en vivo o simulador)
-        val externalScores: List<ExternalMatchScore> = if (forceSimulator) {
-            log.info("Sincronizando partidos mundiales en MODO SIMULACIÓN...")
-            simulator.fetchWorldwideMatches(dateFrom, dateTo)
-        } else {
-            val apiResults = apiClient.fetchWorldwideMatches(dateFrom, dateTo)
-            if (apiResults.isEmpty()) {
-                log.info("API externa no devolvió partidos (sin token configurado o fuera de rango). Usando simulador mundial de respaldo...")
-                simulator.fetchWorldwideMatches(dateFrom, dateTo)
-            } else {
-                apiResults
-            }
-        }
+        // 1. Obtener partidos mundiales exclusivamente desde API de deportes real
+        val externalScores: List<ExternalMatchScore> = apiClient.fetchWorldwideMatches(dateFrom, dateTo)
 
         if (externalScores.isEmpty()) {
+            log.info("API de deportes no devolvió partidos para el período consultado (sin partidos programados o token sin acceso).")
             return SyncSummaryDto(
                 partidosProcesados = 0,
                 partidosFinalizados = 0,
                 pronosticosLiquidados = 0,
                 puntosOtorgados = 0,
-                mensaje = "No se encontraron partidos para sincronizar en el período consultado.",
+                mensaje = "No se encontraron partidos reales en la API externa para el período consultado.",
                 detalles = emptyList()
             )
         }

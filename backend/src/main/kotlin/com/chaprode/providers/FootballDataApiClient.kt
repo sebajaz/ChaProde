@@ -63,10 +63,11 @@ data class FootballDataScoreDetail(
 
 class FootballDataApiClient(
     private val baseUrl: String = "https://api.football-data.org/v4",
-    private val apiToken: String = ""
+    apiToken: String = ""
 ) : SportsDataProvider {
 
     private val log = LoggerFactory.getLogger(FootballDataApiClient::class.java)
+    private val token: String = apiToken.ifBlank { System.getenv("FOOTBALL_API_TOKEN") ?: "" }
 
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -78,7 +79,7 @@ class FootballDataApiClient(
     }
 
     override suspend fun fetchWorldwideMatches(dateFrom: String?, dateTo: String?): List<ExternalMatchScore> {
-        if (apiToken.isBlank()) {
+        if (token.isBlank()) {
             log.warn("FootballDataApiClient: FOOTBALL_API_TOKEN está vacío. Se requiere token para consultar football-data.org.")
             return emptyList()
         }
@@ -94,7 +95,7 @@ class FootballDataApiClient(
 
         return try {
             val response = client.get(endpoint) {
-                header("X-Auth-Token", apiToken)
+                header("X-Auth-Token", token)
                 contentType(ContentType.Application.Json)
             }
 
@@ -116,7 +117,7 @@ class FootballDataApiClient(
     }
 
     override suspend fun fetchMatchResults(competitionCode: String?): List<ExternalMatchScore> {
-        if (apiToken.isBlank()) {
+        if (token.isBlank()) {
             log.warn("FootballDataApiClient: Sin token de API configurado. Omitiendo llamada HTTP.")
             return emptyList()
         }
@@ -135,7 +136,7 @@ class FootballDataApiClient(
             log.info("Consultando API externa en {}", endpoint)
 
             val response = client.get(endpoint) {
-                header("X-Auth-Token", apiToken)
+                header("X-Auth-Token", token)
                 contentType(ContentType.Application.Json)
             }
 

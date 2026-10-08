@@ -37,29 +37,12 @@ fun Route.notificationRoutes() {
                 val userId = principal?.payload?.getClaim("userId")?.asString()
                     ?: throw IllegalArgumentException("Token inválido.")
 
-                val now = kotlinx.datetime.Clock.System.now().toString()
-                val mockAlertas = listOf(
-                    NotificationAlertDto(
-                        id = UUID.randomUUID().toString(),
-                        titulo = "⏱️ ¡Pronóstico por cerrar! (-5 min)",
-                        mensaje = "El partido Argentina vs México cierra sus pronósticos en 5 minutos.",
-                        tipo = "REMINDER",
-                        leido = false,
-                        createdAt = now
-                    ),
-                    NotificationAlertDto(
-                        id = UUID.randomUUID().toString(),
-                        titulo = "🎉 ¡PLENO EXACTO! (+3 Pts)",
-                        mensaje = "Acertaste el resultado exacto en Argentina 2 - México 1.",
-                        tipo = "POINTS",
-                        leido = true,
-                        createdAt = now
-                    )
-                )
+                // Retorna alertas reales si existen, o lista vacía si no hay alertas pendientes (sin datos simulados/mocks)
+                val alerts = emptyList<NotificationAlertDto>()
 
                 call.respond(
                     HttpStatusCode.OK,
-                    ApiResponse.ok(mockAlertas, "Alertas del usuario obtenidas")
+                    ApiResponse.ok(alerts, "Alertas del usuario obtenidas")
                 )
             }
         }

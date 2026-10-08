@@ -129,10 +129,10 @@ export function App() {
     }
   };
 
-  const handleSyncApi = async (modo?: 'live' | 'simular') => {
+  const handleSyncApi = async () => {
     try {
       setIsSyncing(true);
-      const summary = await api.syncMatchesWithApi(modo, selectedTournamentId);
+      const summary = await api.syncMatchesWithApi(selectedTournamentId);
       setActionMessage({
         text: `⚡ ${summary.mensaje}`,
         type: summary.partidosFinalizados > 0 || summary.partidosProcesados > 0 ? 'success' : 'error'
@@ -426,7 +426,7 @@ export function App() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-2">
-                    Trae y actualiza partidos de Champions League, Premier League, La Liga, Serie A, Libertadores y Mundial desde football-data.org o simulación mundial.
+                    Trae y actualiza partidos reales de ligas oficiales de todo el mundo directamente desde football-data.org. Si la API oficial no devuelve partidos, no se ingresarán datos ficticios.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -436,15 +436,7 @@ export function App() {
                     className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20"
                   >
                     <Zap className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
-                    {isSyncing ? 'Sincronizando...' : '⚡ Sincronizar API Mundial'}
-                  </button>
-                  <button
-                    onClick={() => handleSyncApi('simular')}
-                    disabled={isSyncing}
-                    className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 font-semibold text-xs px-4 py-2.5 rounded-xl transition border border-sky-500/30"
-                    title="Simula resultados predefinidos de ligas de todo el mundo"
-                  >
-                    🎮 Simular Demo Mundial
+                    {isSyncing ? 'Sincronizando...' : '⚡ Sincronizar API en Vivo'}
                   </button>
                 </div>
               </div>
@@ -495,14 +487,7 @@ export function App() {
                   className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-md shadow-amber-500/20"
                 >
                   <Zap className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
-                  {isSyncing ? 'Sincronizando...' : '⚡ Sincronizar API Mundial'}
-                </button>
-                <button
-                  onClick={() => handleSyncApi('simular')}
-                  disabled={isSyncing}
-                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 font-semibold text-xs px-3.5 py-2 rounded-xl transition border border-sky-500/30"
-                >
-                  🎮 Simular Marcadores
+                  {isSyncing ? 'Sincronizando...' : '⚡ Sincronizar API en Vivo'}
                 </button>
               </div>
             </div>
