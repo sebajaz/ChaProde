@@ -66,8 +66,16 @@ class TournamentService(
     }
 
     suspend fun getMatchesByTournament(torneoId: String): List<MatchDto> {
+        val trimmed = torneoId.trim()
+        if (trimmed.equals("todos", ignoreCase = true) || trimmed.equals("all", ignoreCase = true)) {
+            return matchRepository.getAllMatches()
+        }
         val uuid = resolveTournamentUuid(torneoId)
         return matchRepository.getMatchesByTournament(uuid)
+    }
+
+    suspend fun getAllMatches(): List<MatchDto> {
+        return matchRepository.getAllMatches()
     }
 
     suspend fun getAllTeams(): List<TeamDto> {

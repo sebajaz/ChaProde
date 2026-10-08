@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,8 +34,8 @@ import com.chaprode.mobile.ui.prediction.PredictionViewModel
 @Composable
 fun FixtureScreen(
     viewModel: PredictionViewModel,
-    torneoId: String = "activo",
-    torneoNombre: String = "Copa Mundial FIFA 2026",
+    torneoId: String = "todos",
+    torneoNombre: String = "Partidos Mundiales",
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -61,6 +62,16 @@ fun FixtureContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val tournamentsInList = remember(state.matches) {
+        state.matches.mapNotNull { it.torneoNombre }.distinct()
+    }
+    var selectedFilter by remember { mutableStateOf("todos") }
+
+    val displayedMatches = remember(state.matches, selectedFilter) {
+        if (selectedFilter == "todos") state.matches
+        else state.matches.filter { it.torneoNombre == selectedFilter }
+    }
+
     LaunchedEffect(state.successMessage, state.errorMessage) {
         state.successMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -84,7 +95,7 @@ fun FixtureContent(
                             fontSize = 18.sp
                         )
                         Text(
-                            text = "Fixture y Pronósticos",
+                            text = "Fixture y Pronósticos Mundiales (${state.matches.size} partidos)",
                             color = Color(0xFF94A3B8),
                             fontSize = 12.sp
                         )
@@ -119,26 +130,62 @@ fun FixtureContent(
                     Text(text = state.errorMessage, color = Color(0xFFEF4444), fontSize = 16.sp)
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(state.matches, key = { it.id }) { match ->
-                        InteractiveMatchCard(
-                            match = match,
-                            isSaving = state.savingMatchId == match.id,
-                            onLocalGoalsChange = { newGoals ->
-                                onEvent(PredictionUiEvent.OnLocalGoalsChanged(match.id, newGoals))
-                            },
-                            onVisitorGoalsChange = { newGoals ->
-                                onEvent(PredictionUiEvent.OnVisitorGoalsChanged(match.id, newGoals))
-                            },
-                            onSaveClick = {
-                                onEvent(PredictionUiEvent.OnSavePrediction(match.id))
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Barra de filtros por torneo mundial
+                    if (tournamentsInList.size > 1) {
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                FilterChip(
+                                    selected = selectedFilter == "todos",
+                                    onClick = { selectedFilter = "todos" },
+                                    label = { Text("🌍 Todos (${state.matches.size})") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFF0284C7),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
                             }
-                        )
+                            items(tournamentsInList) { name ->
+                                val count = state.matches.count { it.torneoNombre == name }
+                                FilterChip(
+                                    selected = selectedFilter == name,
+                                    onClick = { selectedFilter = name },
+                                    label = { Text("$name ($count)") },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFF0284C7),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(displayedMatches, key = { it.id }) { match ->
+                            InteractiveMatchCard(
+                                match = match,
+                                isSaving = state.savingMatchId == match.id,
+                                onLocalGoalsChange = { newGoals ->
+                                    onEvent(PredictionUiEvent.OnLocalGoalsChanged(match.id, newGoals))
+                                },
+                                onVisitorGoalsChange = { newGoals ->
+                                    onEvent(PredictionUiEvent.OnVisitorGoalsChanged(match.id, newGoals))
+                                },
+                                onSaveClick = {
+                                    onEvent(PredictionUiEvent.OnSavePrediction(match.id))
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -165,7 +212,24 @@ fun InteractiveMatchCard(
                 .fillMaxWidth()
                 .padding(18.dp)
         ) {
-            // Header: Fecha y Estado de Corte de 15 Minutos
+            // Badge de Torneo / Competición
+            if (!match.torneoNombre.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF0F172A).copy(alpha = 0.8f),
+                    modifier = Modifier.padding(bottom = 10.dp)
+                ) {
+                    Text(
+                        text = "🏆 ${match.torneoNombre}",
+                        color = Color(0xFF38BDF8),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            // Header: Fecha y Estado de Corte de 5 Minutos
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

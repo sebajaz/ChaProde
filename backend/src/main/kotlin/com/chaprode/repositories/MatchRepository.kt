@@ -5,6 +5,7 @@ import com.chaprode.dto.MatchDto
 import com.chaprode.dto.TeamDto
 import com.chaprode.models.EquiposTable
 import com.chaprode.models.PartidosTable
+import com.chaprode.models.TorneosTable
 import kotlinx.datetime.Instant
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -12,44 +13,68 @@ import java.util.*
 
 class MatchRepository {
 
+    private fun toMatchDto(
+        row: ResultRow,
+        localEquipos: Alias<EquiposTable>,
+        visitanteEquipos: Alias<EquiposTable>
+    ): MatchDto {
+        val localDto = TeamDto(
+            id = row[localEquipos[EquiposTable.id]].value.toString(),
+            nombre = row[localEquipos[EquiposTable.nombre]],
+            codigoExterno = row[localEquipos[EquiposTable.codigoExterno]],
+            urlBandera = row[localEquipos[EquiposTable.urlBandera]],
+            codigoIso = row[localEquipos[EquiposTable.codigoIso]]
+        )
+        val visitanteDto = TeamDto(
+            id = row[visitanteEquipos[EquiposTable.id]].value.toString(),
+            nombre = row[visitanteEquipos[EquiposTable.nombre]],
+            codigoExterno = row[visitanteEquipos[EquiposTable.codigoExterno]],
+            urlBandera = row[visitanteEquipos[EquiposTable.urlBandera]],
+            codigoIso = row[visitanteEquipos[EquiposTable.codigoIso]]
+        )
+
+        return MatchDto(
+            id = row[PartidosTable.id].value.toString(),
+            torneoId = row[PartidosTable.torneoId].value.toString(),
+            torneoNombre = row.getOrNull(TorneosTable.nombre),
+            torneoCodigo = row.getOrNull(TorneosTable.codigoExterno),
+            torneoLogoUrl = row.getOrNull(TorneosTable.logoUrl),
+            equipoLocal = localDto,
+            equipoVisitante = visitanteDto,
+            fechaPartido = row[PartidosTable.fechaPartido].toString(),
+            golesLocal = row[PartidosTable.golesLocal],
+            golesVisitante = row[PartidosTable.golesVisitante],
+            estado = row[PartidosTable.estado],
+            codigoExterno = row[PartidosTable.codigoExterno]
+        )
+    }
+
+    suspend fun getAllMatches(): List<MatchDto> = dbQuery {
+        val localEquipos = EquiposTable.alias("local_equipos")
+        val visitanteEquipos = EquiposTable.alias("visitante_equipos")
+
+        PartidosTable
+            .join(TorneosTable, JoinType.INNER, additionalConstraint = { PartidosTable.torneoId eq TorneosTable.id })
+            .join(localEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoLocalId eq localEquipos[EquiposTable.id] })
+            .join(visitanteEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoVisitanteId eq visitanteEquipos[EquiposTable.id] })
+            .selectAll()
+            .where { TorneosTable.activo eq true }
+            .orderBy(PartidosTable.fechaPartido, SortOrder.ASC)
+            .map { row -> toMatchDto(row, localEquipos, visitanteEquipos) }
+    }
+
     suspend fun getMatchesByTournament(torneoId: UUID): List<MatchDto> = dbQuery {
         val localEquipos = EquiposTable.alias("local_equipos")
         val visitanteEquipos = EquiposTable.alias("visitante_equipos")
 
         PartidosTable
+            .join(TorneosTable, JoinType.INNER, additionalConstraint = { PartidosTable.torneoId eq TorneosTable.id })
             .join(localEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoLocalId eq localEquipos[EquiposTable.id] })
             .join(visitanteEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoVisitanteId eq visitanteEquipos[EquiposTable.id] })
             .selectAll()
             .where { PartidosTable.torneoId eq torneoId }
             .orderBy(PartidosTable.fechaPartido, SortOrder.ASC)
-            .map { row ->
-                val localDto = TeamDto(
-                    id = row[localEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[localEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[localEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[localEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[localEquipos[EquiposTable.codigoIso]]
-                )
-                val visitanteDto = TeamDto(
-                    id = row[visitanteEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[visitanteEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[visitanteEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[visitanteEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[visitanteEquipos[EquiposTable.codigoIso]]
-                )
-
-                MatchDto(
-                    id = row[PartidosTable.id].value.toString(),
-                    torneoId = row[PartidosTable.torneoId].value.toString(),
-                    equipoLocal = localDto,
-                    equipoVisitante = visitanteDto,
-                    fechaPartido = row[PartidosTable.fechaPartido].toString(),
-                    golesLocal = row[PartidosTable.golesLocal],
-                    golesVisitante = row[PartidosTable.golesVisitante],
-                    estado = row[PartidosTable.estado],
-                    codigoExterno = row[PartidosTable.codigoExterno]
-                )
-            }
+            .map { row -> toMatchDto(row, localEquipos, visitanteEquipos) }
     }
 
     suspend fun getMatchById(id: UUID): MatchDto? = dbQuery {
@@ -57,38 +82,12 @@ class MatchRepository {
         val visitanteEquipos = EquiposTable.alias("visitante_equipos")
 
         PartidosTable
+            .join(TorneosTable, JoinType.INNER, additionalConstraint = { PartidosTable.torneoId eq TorneosTable.id })
             .join(localEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoLocalId eq localEquipos[EquiposTable.id] })
             .join(visitanteEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoVisitanteId eq visitanteEquipos[EquiposTable.id] })
             .selectAll()
             .where { PartidosTable.id eq id }
-            .map { row ->
-                val localDto = TeamDto(
-                    id = row[localEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[localEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[localEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[localEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[localEquipos[EquiposTable.codigoIso]]
-                )
-                val visitanteDto = TeamDto(
-                    id = row[visitanteEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[visitanteEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[visitanteEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[visitanteEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[visitanteEquipos[EquiposTable.codigoIso]]
-                )
-
-                MatchDto(
-                    id = row[PartidosTable.id].value.toString(),
-                    torneoId = row[PartidosTable.torneoId].value.toString(),
-                    equipoLocal = localDto,
-                    equipoVisitante = visitanteDto,
-                    fechaPartido = row[PartidosTable.fechaPartido].toString(),
-                    golesLocal = row[PartidosTable.golesLocal],
-                    golesVisitante = row[PartidosTable.golesVisitante],
-                    estado = row[PartidosTable.estado],
-                    codigoExterno = row[PartidosTable.codigoExterno]
-                )
-            }
+            .map { row -> toMatchDto(row, localEquipos, visitanteEquipos) }
             .singleOrNull()
     }
 
@@ -97,6 +96,7 @@ class MatchRepository {
         val visitanteEquipos = EquiposTable.alias("visitante_equipos")
 
         val query = PartidosTable
+            .join(TorneosTable, JoinType.INNER, additionalConstraint = { PartidosTable.torneoId eq TorneosTable.id })
             .join(localEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoLocalId eq localEquipos[EquiposTable.id] })
             .join(visitanteEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoVisitanteId eq visitanteEquipos[EquiposTable.id] })
             .selectAll()
@@ -107,34 +107,7 @@ class MatchRepository {
         }
 
         query.orderBy(PartidosTable.fechaPartido, SortOrder.ASC)
-            .map { row ->
-                val localDto = TeamDto(
-                    id = row[localEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[localEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[localEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[localEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[localEquipos[EquiposTable.codigoIso]]
-                )
-                val visitanteDto = TeamDto(
-                    id = row[visitanteEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[visitanteEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[visitanteEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[visitanteEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[visitanteEquipos[EquiposTable.codigoIso]]
-                )
-
-                MatchDto(
-                    id = row[PartidosTable.id].value.toString(),
-                    torneoId = row[PartidosTable.torneoId].value.toString(),
-                    equipoLocal = localDto,
-                    equipoVisitante = visitanteDto,
-                    fechaPartido = row[PartidosTable.fechaPartido].toString(),
-                    golesLocal = row[PartidosTable.golesLocal],
-                    golesVisitante = row[PartidosTable.golesVisitante],
-                    estado = row[PartidosTable.estado],
-                    codigoExterno = row[PartidosTable.codigoExterno]
-                )
-            }
+            .map { row -> toMatchDto(row, localEquipos, visitanteEquipos) }
     }
 
     suspend fun updateMatchLiveScore(
@@ -155,38 +128,12 @@ class MatchRepository {
         val visitanteEquipos = EquiposTable.alias("visitante_equipos")
 
         PartidosTable
+            .join(TorneosTable, JoinType.INNER, additionalConstraint = { PartidosTable.torneoId eq TorneosTable.id })
             .join(localEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoLocalId eq localEquipos[EquiposTable.id] })
             .join(visitanteEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoVisitanteId eq visitanteEquipos[EquiposTable.id] })
             .selectAll()
             .where { PartidosTable.codigoExterno eq codigoExterno }
-            .map { row ->
-                val localDto = TeamDto(
-                    id = row[localEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[localEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[localEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[localEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[localEquipos[EquiposTable.codigoIso]]
-                )
-                val visitanteDto = TeamDto(
-                    id = row[visitanteEquipos[EquiposTable.id]].value.toString(),
-                    nombre = row[visitanteEquipos[EquiposTable.nombre]],
-                    codigoExterno = row[visitanteEquipos[EquiposTable.codigoExterno]],
-                    urlBandera = row[visitanteEquipos[EquiposTable.urlBandera]],
-                    codigoIso = row[visitanteEquipos[EquiposTable.codigoIso]]
-                )
-
-                MatchDto(
-                    id = row[PartidosTable.id].value.toString(),
-                    torneoId = row[PartidosTable.torneoId].value.toString(),
-                    equipoLocal = localDto,
-                    equipoVisitante = visitanteDto,
-                    fechaPartido = row[PartidosTable.fechaPartido].toString(),
-                    golesLocal = row[PartidosTable.golesLocal],
-                    golesVisitante = row[PartidosTable.golesVisitante],
-                    estado = row[PartidosTable.estado],
-                    codigoExterno = row[PartidosTable.codigoExterno]
-                )
-            }
+            .map { row -> toMatchDto(row, localEquipos, visitanteEquipos) }
             .singleOrNull()
     }
 

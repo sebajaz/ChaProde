@@ -8,11 +8,16 @@ import com.chaprode.providers.FootballDataApiClient
 import com.chaprode.providers.FootballDataSimulator
 import com.chaprode.providers.SportsDataProvider
 import com.chaprode.repositories.MatchRepository
+import com.chaprode.repositories.TournamentRepository
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import org.slf4j.LoggerFactory
 import java.util.*
+import kotlin.time.Duration.Companion.days
 
 class MatchSyncService(
     private val matchRepository: MatchRepository = MatchRepository(),
+    private val tournamentRepository: TournamentRepository = TournamentRepository(),
     private val apiClient: SportsDataProvider = FootballDataApiClient(),
     val simulator: FootballDataSimulator = FootballDataSimulator()
 ) {
@@ -21,71 +26,139 @@ class MatchSyncService(
 
     suspend fun syncMatches(
         torneoId: UUID? = null,
-        forceSimulator: Boolean = false
+        forceSimulator: Boolean = false,
+        dateFrom: String? = null,
+        dateTo: String? = null
     ): SyncSummaryDto {
-        val pendingOrLiveMatches = matchRepository.getPendingOrLiveMatches(torneoId)
-
-        if (pendingOrLiveMatches.isEmpty()) {
-            return SyncSummaryDto(
-                partidosProcesados = 0,
-                partidosFinalizados = 0,
-                pronosticosLiquidados = 0,
-                puntosOtorgados = 0,
-                mensaje = "Todos los partidos ya se encuentran finalizados o no hay partidos programados.",
-                detalles = emptyList()
-            )
-        }
-
-        // Obtener resultados externos (API o simulador)
+        // 1. Obtener partidos mundiales (desde API de deportes en vivo o simulador)
         val externalScores: List<ExternalMatchScore> = if (forceSimulator) {
-            log.info("Sincronizando en MODO SIMULACIÓN...")
-            simulator.fetchMatchResults()
+            log.info("Sincronizando partidos mundiales en MODO SIMULACIÓN...")
+            simulator.fetchWorldwideMatches(dateFrom, dateTo)
         } else {
-            val apiResults = apiClient.fetchMatchResults()
+            val apiResults = apiClient.fetchWorldwideMatches(dateFrom, dateTo)
             if (apiResults.isEmpty()) {
-                log.info("API externa no devolvió resultados (sin token o sin partidos activos). Usando simulador de respaldo...")
-                simulator.fetchMatchResults()
+                log.info("API externa no devolvió partidos (sin token configurado o fuera de rango). Usando simulador mundial de respaldo...")
+                simulator.fetchWorldwideMatches(dateFrom, dateTo)
             } else {
                 apiResults
             }
         }
 
+        if (externalScores.isEmpty()) {
+            return SyncSummaryDto(
+                partidosProcesados = 0,
+                partidosFinalizados = 0,
+                pronosticosLiquidados = 0,
+                puntosOtorgados = 0,
+                mensaje = "No se encontraron partidos para sincronizar en el período consultado.",
+                detalles = emptyList()
+            )
+        }
+
         var procesados = 0
+        var importadosNuevos = 0
         var finalizados = 0
         var totalPronosticosLiquidados = 0
         var totalPuntosOtorgados = 0
         val detalles = mutableListOf<String>()
 
-        for (match in pendingOrLiveMatches) {
-            val matchUuid = UUID.fromString(match.id)
+        // 2. Procesar e importar partidos externos a la base de datos
+        for (ext in externalScores) {
+            try {
+                // A. Identificar o crear el Torneo correspondiente
+                val compCode = ext.competitionCode ?: "MUNDO"
+                val compName = ext.competitionName ?: "Competición Internacional"
+                var torneo = tournamentRepository.findTournamentByCodigoOrNombre(compCode, compName)
+                if (torneo == null) {
+                    torneo = tournamentRepository.createTournament(
+                        nombre = compName,
+                        codigoExterno = compCode,
+                        logoUrl = ext.competitionEmblem
+                    )
+                    log.info("Nuevo torneo creado automáticamente desde API: {} ({})", compName, compCode)
+                }
+                val currentTorneoUuid = UUID.fromString(torneo.id)
 
-            // Buscar coincidencia por código externo del partido o por códigos de los equipos
-            val externalMatch = externalScores.firstOrNull { ext ->
-                (match.codigoExterno != null && ext.codigoExterno.equals(match.codigoExterno, ignoreCase = true)) ||
-                (ext.localCodigo.equals(match.equipoLocal.codigoExterno, ignoreCase = true) &&
-                 ext.visitanteCodigo.equals(match.equipoVisitante.codigoExterno, ignoreCase = true))
-            }
+                // Si se solicitó filtrar por un torneo específico y no coincide, omitir
+                if (torneoId != null && torneoId != currentTorneoUuid) {
+                    continue
+                }
 
-            if (externalMatch != null) {
-                procesados++
-                val gLocal = externalMatch.golesLocal ?: 0
-                val gVisitante = externalMatch.golesVisitante ?: 0
+                // B. Identificar o crear equipos (Local y Visitante)
+                val localNombre = ext.localNombre ?: ext.localCodigo
+                var localTeam = tournamentRepository.findTeamByCodigoOrNombre(ext.localCodigo, localNombre)
+                if (localTeam == null) {
+                    localTeam = tournamentRepository.createTeam(
+                        nombre = localNombre,
+                        codigoExterno = ext.localCodigo,
+                        urlBandera = ext.localBandera,
+                        codigoIso = ext.localCodigo.take(2)
+                    )
+                }
+                val localTeamUuid = UUID.fromString(localTeam.id)
+                tournamentRepository.addTeamToTournament(currentTorneoUuid, localTeamUuid)
 
-                when (externalMatch.estado.uppercase()) {
+                val visitNombre = ext.visitanteNombre ?: ext.visitanteCodigo
+                var visitTeam = tournamentRepository.findTeamByCodigoOrNombre(ext.visitanteCodigo, visitNombre)
+                if (visitTeam == null) {
+                    visitTeam = tournamentRepository.createTeam(
+                        nombre = visitNombre,
+                        codigoExterno = ext.visitanteCodigo,
+                        urlBandera = ext.visitanteBandera,
+                        codigoIso = ext.visitanteCodigo.take(2)
+                    )
+                }
+                val visitTeamUuid = UUID.fromString(visitTeam.id)
+                tournamentRepository.addTeamToTournament(currentTorneoUuid, visitTeamUuid)
+
+                // C. Buscar si el partido ya existe en la base de datos
+                var existingMatch = if (!ext.codigoExterno.isNullOrBlank()) {
+                    matchRepository.getMatchByExternalCode(ext.codigoExterno)
+                } else null
+
+                val gLocal = ext.golesLocal ?: 0
+                val gVisitante = ext.golesVisitante ?: 0
+
+                val matchUuid: UUID
+                if (existingMatch == null) {
+                    // Partido nuevo: crearlo en la base de datos
+                    val fPartido = ext.fechaPartido?.let {
+                        try { Instant.parse(it) } catch (e: Exception) { Clock.System.now().plus(2.days) }
+                    } ?: Clock.System.now().plus(2.days)
+
+                    matchUuid = matchRepository.createMatch(
+                        torneoId = currentTorneoUuid,
+                        equipoLocalId = localTeamUuid,
+                        equipoVisitanteId = visitTeamUuid,
+                        fechaPartido = fPartido,
+                        codigoExterno = ext.codigoExterno
+                    )
+                    importadosNuevos++
+                    procesados++
+                    log.info("Nuevo partido importado desde API: {} vs {} en {}", localNombre, visitNombre, compName)
+                } else {
+                    matchUuid = UUID.fromString(existingMatch.id)
+                    procesados++
+                }
+
+                // D. Actualizar marcador o liquidar pronósticos si finalizó
+                when (ext.estado.uppercase()) {
                     "FINALIZADO" -> {
-                        val result = matchRepository.settleMatchResult(
-                            partidoId = matchUuid,
-                            golesLocal = gLocal,
-                            golesVisitante = gVisitante,
-                            estado = "FINALIZADO"
-                        )
-                        finalizados++
-                        totalPronosticosLiquidados += result.totalPronosticosLiquidados
-                        totalPuntosOtorgados += result.totalPuntosOtorgados
-                        detalles.add(
-                            "✅ ${match.equipoLocal.nombre} $gLocal - $gVisitante ${match.equipoVisitante.nombre}: FINALIZADO (${result.totalPronosticosLiquidados} pronósticos calculados, +${result.totalPuntosOtorgados} pts asignados)."
-                        )
-                        log.info("Partido {} liquidado con éxito por sincronización: {} vs {}", match.id, gLocal, gVisitante)
+                        if (existingMatch?.estado != "FINALIZADO") {
+                            val result = matchRepository.settleMatchResult(
+                                partidoId = matchUuid,
+                                golesLocal = gLocal,
+                                golesVisitante = gVisitante,
+                                estado = "FINALIZADO"
+                            )
+                            finalizados++
+                            totalPronosticosLiquidados += result.totalPronosticosLiquidados
+                            totalPuntosOtorgados += result.totalPuntosOtorgados
+                            detalles.add(
+                                "✅ [$compName] $localNombre $gLocal - $gVisitante $visitNombre: FINALIZADO (${result.totalPronosticosLiquidados} pronósticos calculados, +${result.totalPuntosOtorgados} pts asignados)."
+                            )
+                            log.info("Partido {} liquidado con éxito: {} {} - {} {}", matchUuid, localNombre, gLocal, gVisitante, visitNombre)
+                        }
                     }
                     "EN_JUEGO" -> {
                         matchRepository.updateMatchLiveScore(
@@ -95,18 +168,19 @@ class MatchSyncService(
                             estado = "EN_JUEGO"
                         )
                         detalles.add(
-                            "⏱️ ${match.equipoLocal.nombre} $gLocal - $gVisitante ${match.equipoVisitante.nombre}: EN JUEGO ($gLocal - $gVisitante parcial)."
+                            "⏱️ [$compName] $localNombre $gLocal - $gVisitante $visitNombre: EN JUEGO ($gLocal - $gVisitante parcial)."
                         )
-                        log.info("Partido {} actualizado a EN_JUEGO: {} - {}", match.id, gLocal, gVisitante)
                     }
                 }
+            } catch (e: Exception) {
+                log.error("Error al procesar partido externo {}: {}", ext.codigoExterno, e.message)
             }
         }
 
-        val resumenMensaje = if (finalizados > 0 || procesados > 0) {
-            "Sincronización exitosa: $finalizados partidos finalizados, $totalPronosticosLiquidados pronósticos liquidados ($totalPuntosOtorgados puntos otorgados)."
+        val resumenMensaje = if (importadosNuevos > 0 || finalizados > 0) {
+            "Sincronización mundial exitosa: $procesados partidos sincronizados ($importadosNuevos nuevos importados, $finalizados finalizados, $totalPronosticosLiquidados pronósticos liquidados)."
         } else {
-            "No se encontraron nuevos marcadores para actualizar."
+            "Sincronización al día: $procesados partidos verificados en todo el mundo. No hay nuevos cambios pendientes."
         }
 
         return SyncSummaryDto(

@@ -1,0 +1,436 @@
+[
+  {
+    "torneo": {
+      "nombre": "UEFA Champions League",
+      "codigoExterno": "CL",
+      "logoUrl": "https://crests.football-data.org/CL.png",
+      "fechaInicio": "2026-09-15T19:00:00Z",
+      "fechaFin": "2027-05-29T21:00:00Z"
+    },
+    "equipos": [
+      {
+        "nombre": "Real Madrid",
+        "codigoExterno": "RMA",
+        "urlBandera": "https://crests.football-data.org/86.png",
+        "codigoIso": "ES"
+      },
+      {
+        "nombre": "Manchester City",
+        "codigoExterno": "MCI",
+        "urlBandera": "https://crests.football-data.org/65.png",
+        "codigoIso": "EN"
+      },
+      {
+        "nombre": "Bayern Múnich",
+        "codigoExterno": "BAY",
+        "urlBandera": "https://crests.football-data.org/5.png",
+        "codigoIso": "DE"
+      },
+      {
+        "nombre": "Paris Saint-Germain",
+        "codigoExterno": "PSG",
+        "urlBandera": "https://crests.football-data.org/524.png",
+        "codigoIso": "FR"
+      },
+      {
+        "nombre": "Arsenal",
+        "codigoExterno": "ARS",
+        "urlBandera": "https://crests.football-data.org/57.png",
+        "codigoIso": "EN"
+      },
+      {
+        "nombre": "FC Barcelona",
+        "codigoExterno": "BAR",
+        "urlBandera": "https://crests.football-data.org/81.png",
+        "codigoIso": "ES"
+      }
+    ],
+    "partidos": [
+      {
+        "codigoExterno": "MATCH-CL-01",
+        "equipoLocalCodigo": "RMA",
+        "equipoVisitanteCodigo": "MCI",
+        "fechaPartido": "2026-10-21T19:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-CL-02",
+        "equipoLocalCodigo": "BAY",
+        "equipoVisitanteCodigo": "PSG",
+        "fechaPartido": "2026-10-22T19:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-CL-03",
+        "equipoLocalCodigo": "ARS",
+        "equipoVisitanteCodigo": "BAR",
+        "fechaPartido": "2026-10-28T19:00:00Z",
+        "estado": "PENDIENTE"
+      }
+    ]
+  },
+  {
+    "torneo": {
+      "nombre": "Premier League",
+      "codigoExterno": "PL",
+      "logoUrl": "https://crests.football-data.org/PL.png",
+      "fechaInicio": "2026-08-15T11:30:00Z",
+      "fechaFin": "2027-05-23T15:00:00Z"
+    },
+    "equipos": [
+      {
+        "nombre": "Liverpool",
+        "codigoExterno": "LIV",
+        "urlBandera": "https://crests.football-data.org/64.png",
+        "codigoIso": "EN"
+      },
+      {
+        "nombre": "Chelsea",
+        "codigoExterno": "CHE",
+        "urlBandera": "https://crests.football-data.org/61.png",
+        "codigoIso": "EN"
+      },
+      {
+        "nombre": "Manchester United",
+        "codigoExterno": "MUN",
+        "urlBandera": "https://crests.football-data.org/66.png",
+        "codigoIso": "EN"
+      },
+      {
+        "nombre": "Tottenham Hotspur",
+        "codigoExterno": "TOT",
+        "urlBandera": "https://crests.football-data.org/73.png",
+        "codigoIso": "EN"
+      },
+      {
+        "nombre": "Arsenal",
+        "codigoExterno": "ARS",
+        "urlBandera": "https://crests.football-data.org/57.png",
+        "codigoIso": "EN"
+      },
+      {
+        "nombre": "Manchester City",
+        "codigoExterno": "MCI",
+        "urlBandera": "https://crests.football-data.org/65.png",
+        "codigoIso": "EN"
+      }
+    ],
+    "partidos": [
+      {
+        "codigoExterno": "MATCH-PL-01",
+        "equipoLocalCodigo": "LIV",
+        "equipoVisitanteCodigo": "CHE",
+        "fechaPartido": "2026-10-18T15:30:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-PL-02",
+        "equipoLocalCodigo": "ARS",
+        "equipoVisitanteCodigo": "MUN",
+        "fechaPartido": "2026-10-25T16:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-PL-03",
+        "equipoLocalCodigo": "MCI",
+        "equipoVisitanteCodigo": "TOT",
+        "fechaPartido": "2026-10-31T14:00:00Z",
+        "estado": "PENDIENTE"
+      }
+    ]
+  },
+  {
+    "torneo": {
+      "nombre": "La Liga",
+      "codigoExterno": "PD",
+      "logoUrl": "https://crests.football-data.org/PD.png",
+      "fechaInicio": "2026-08-16T17:00:00Z",
+      "fechaFin": "2027-05-23T19:00:00Z"
+    },
+    "equipos": [
+      {
+        "nombre": "Real Madrid",
+        "codigoExterno": "RMA",
+        "urlBandera": "https://crests.football-data.org/86.png",
+        "codigoIso": "ES"
+      },
+      {
+        "nombre": "FC Barcelona",
+        "codigoExterno": "BAR",
+        "urlBandera": "https://crests.football-data.org/81.png",
+        "codigoIso": "ES"
+      },
+      {
+        "nombre": "Atlético de Madrid",
+        "codigoExterno": "ATM",
+        "urlBandera": "https://crests.football-data.org/78.png",
+        "codigoIso": "ES"
+      },
+      {
+        "nombre": "Sevilla FC",
+        "codigoExterno": "SEV",
+        "urlBandera": "https://crests.football-data.org/559.png",
+        "codigoIso": "ES"
+      }
+    ],
+    "partidos": [
+      {
+        "codigoExterno": "MATCH-PD-01",
+        "equipoLocalCodigo": "RMA",
+        "equipoVisitanteCodigo": "BAR",
+        "fechaPartido": "2026-10-26T20:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-PD-02",
+        "equipoLocalCodigo": "ATM",
+        "equipoVisitanteCodigo": "SEV",
+        "fechaPartido": "2026-11-01T18:30:00Z",
+        "estado": "PENDIENTE"
+      }
+    ]
+  },
+  {
+    "torneo": {
+      "nombre": "Serie A",
+      "codigoExterno": "SA",
+      "logoUrl": "https://crests.football-data.org/SA.png",
+      "fechaInicio": "2026-08-20T16:30:00Z",
+      "fechaFin": "2027-05-23T18:45:00Z"
+    },
+    "equipos": [
+      {
+        "nombre": "Inter de Milán",
+        "codigoExterno": "INT",
+        "urlBandera": "https://crests.football-data.org/108.png",
+        "codigoIso": "IT"
+      },
+      {
+        "nombre": "AC Milan",
+        "codigoExterno": "MIL",
+        "urlBandera": "https://crests.football-data.org/98.png",
+        "codigoIso": "IT"
+      },
+      {
+        "nombre": "Juventus FC",
+        "codigoExterno": "JUV",
+        "urlBandera": "https://crests.football-data.org/109.png",
+        "codigoIso": "IT"
+      },
+      {
+        "nombre": "AS Roma",
+        "codigoExterno": "ROM",
+        "urlBandera": "https://crests.football-data.org/100.png",
+        "codigoIso": "IT"
+      }
+    ],
+    "partidos": [
+      {
+        "codigoExterno": "MATCH-SA-01",
+        "equipoLocalCodigo": "INT",
+        "equipoVisitanteCodigo": "MIL",
+        "fechaPartido": "2026-10-25T19:45:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-SA-02",
+        "equipoLocalCodigo": "JUV",
+        "equipoVisitanteCodigo": "ROM",
+        "fechaPartido": "2026-11-02T19:45:00Z",
+        "estado": "PENDIENTE"
+      }
+    ]
+  },
+  {
+    "torneo": {
+      "nombre": "Bundesliga",
+      "codigoExterno": "BL1",
+      "logoUrl": "https://crests.football-data.org/BL1.png",
+      "fechaInicio": "2026-08-21T18:30:00Z",
+      "fechaFin": "2027-05-22T13:30:00Z"
+    },
+    "equipos": [
+      {
+        "nombre": "Bayern Múnich",
+        "codigoExterno": "BAY",
+        "urlBandera": "https://crests.football-data.org/5.png",
+        "codigoIso": "DE"
+      },
+      {
+        "nombre": "Borussia Dortmund",
+        "codigoExterno": "BVB",
+        "urlBandera": "https://crests.football-data.org/4.png",
+        "codigoIso": "DE"
+      },
+      {
+        "nombre": "Bayer Leverkusen",
+        "codigoExterno": "B04",
+        "urlBandera": "https://crests.football-data.org/3.png",
+        "codigoIso": "DE"
+      }
+    ],
+    "partidos": [
+      {
+        "codigoExterno": "MATCH-BL-01",
+        "equipoLocalCodigo": "BAY",
+        "equipoVisitanteCodigo": "BVB",
+        "fechaPartido": "2026-10-24T16:30:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-BL-02",
+        "equipoLocalCodigo": "B04",
+        "equipoVisitanteCodigo": "BAY",
+        "fechaPartido": "2026-11-07T16:30:00Z",
+        "estado": "PENDIENTE"
+      }
+    ]
+  },
+  {
+    "torneo": {
+      "nombre": "Copa Libertadores",
+      "codigoExterno": "CLI",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/thumb/0/05/Copa_Libertadores_logo.svg/300px-Copa_Libertadores_logo.svg.png",
+      "fechaInicio": "2026-04-01T22:00:00Z",
+      "fechaFin": "2026-11-28T21:00:00Z"
+    },
+    "equipos": [
+      {
+        "nombre": "River Plate",
+        "codigoExterno": "RIV",
+        "urlBandera": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Escudo_del_C_A_River_Plate.svg/150px-Escudo_del_C_A_River_Plate.svg.png",
+        "codigoIso": "AR"
+      },
+      {
+        "nombre": "Boca Juniors",
+        "codigoExterno": "BOC",
+        "urlBandera": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Boca_Juniors_logo18.svg/150px-Boca_Juniors_logo18.svg.png",
+        "codigoIso": "AR"
+      },
+      {
+        "nombre": "Flamengo",
+        "codigoExterno": "FLA",
+        "urlBandera": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Flamengo_braz_logo.svg/150px-Flamengo_braz_logo.svg.png",
+        "codigoIso": "BR"
+      },
+      {
+        "nombre": "Palmeiras",
+        "codigoExterno": "PAL",
+        "urlBandera": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Palmeiras_logo.svg/150px-Palmeiras_logo.svg.png",
+        "codigoIso": "BR"
+      }
+    ],
+    "partidos": [
+      {
+        "codigoExterno": "MATCH-LIB-01",
+        "equipoLocalCodigo": "BOC",
+        "equipoVisitanteCodigo": "RIV",
+        "fechaPartido": "2026-10-29T23:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-LIB-02",
+        "equipoLocalCodigo": "FLA",
+        "equipoVisitanteCodigo": "PAL",
+        "fechaPartido": "2026-10-30T23:30:00Z",
+        "estado": "PENDIENTE"
+      }
+    ]
+  },
+  {
+    "torneo": {
+      "nombre": "Copa Mundial FIFA 2026",
+      "codigoExterno": "WC2026",
+      "logoUrl": "https://upload.wikimedia.org/wikipedia/en/thumb/1/10/2026_FIFA_World_Cup_logo.svg/240px-2026_FIFA_World_Cup_logo.svg.png",
+      "fechaInicio": "2026-06-11T19:00:00Z",
+      "fechaFin": "2026-07-19T22:00:00Z"
+    },
+    "equipos": [
+      {
+        "nombre": "Argentina",
+        "codigoExterno": "ARG",
+        "urlBandera": "https://flagcdn.com/w160/ar.png",
+        "codigoIso": "AR"
+      },
+      {
+        "nombre": "Brasil",
+        "codigoExterno": "BRA",
+        "urlBandera": "https://flagcdn.com/w160/br.png",
+        "codigoIso": "BR"
+      },
+      {
+        "nombre": "Francia",
+        "codigoExterno": "FRA",
+        "urlBandera": "https://flagcdn.com/w160/fr.png",
+        "codigoIso": "FR"
+      },
+      {
+        "nombre": "España",
+        "codigoExterno": "ESP",
+        "urlBandera": "https://flagcdn.com/w160/es.png",
+        "codigoIso": "ES"
+      },
+      {
+        "nombre": "Alemania",
+        "codigoExterno": "GER",
+        "urlBandera": "https://flagcdn.com/w160/de.png",
+        "codigoIso": "DE"
+      },
+      {
+        "nombre": "Uruguay",
+        "codigoExterno": "URU",
+        "urlBandera": "https://flagcdn.com/w160/uy.png",
+        "codigoIso": "UY"
+      },
+      {
+        "nombre": "México",
+        "codigoExterno": "MEX",
+        "urlBandera": "https://flagcdn.com/w160/mx.png",
+        "codigoIso": "MX"
+      },
+      {
+        "nombre": "Estados Unidos",
+        "codigoExterno": "USA",
+        "urlBandera": "https://flagcdn.com/w160/us.png",
+        "codigoIso": "US"
+      }
+    ],
+    "partidos": [
+      {
+        "codigoExterno": "MATCH-01",
+        "equipoLocalCodigo": "ARG",
+        "equipoVisitanteCodigo": "MEX",
+        "fechaPartido": "2026-06-11T20:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-02",
+        "equipoLocalCodigo": "BRA",
+        "equipoVisitanteCodigo": "URU",
+        "fechaPartido": "2026-06-12T17:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-03",
+        "equipoLocalCodigo": "ESP",
+        "equipoVisitanteCodigo": "GER",
+        "fechaPartido": "2026-06-12T21:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-04",
+        "equipoLocalCodigo": "FRA",
+        "equipoVisitanteCodigo": "USA",
+        "fechaPartido": "2026-06-13T18:00:00Z",
+        "estado": "PENDIENTE"
+      },
+      {
+        "codigoExterno": "MATCH-05",
+        "equipoLocalCodigo": "ARG",
+        "equipoVisitanteCodigo": "BRA",
+        "fechaPartido": "2026-06-18T20:00:00Z",
+        "estado": "PENDIENTE"
+      }
+    ]
+  }
+]

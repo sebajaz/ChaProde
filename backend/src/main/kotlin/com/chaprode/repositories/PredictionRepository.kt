@@ -36,6 +36,13 @@ class PredictionRepository {
             .map { it.toPredictionDto() }
     }
 
+    suspend fun getAllPredictionsByUser(usuarioId: UUID): List<PredictionDto> = dbQuery {
+        PronosticosTable
+            .selectAll()
+            .where { PronosticosTable.usuarioId eq usuarioId }
+            .map { it.toPredictionDto() }
+    }
+
     suspend fun upsertPrediction(
         usuarioId: UUID,
         partidoId: UUID,

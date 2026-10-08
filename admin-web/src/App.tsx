@@ -9,12 +9,13 @@ import {
   Clock, 
   RefreshCw, 
   LogIn, 
-  LogOut,
-  ChevronRight,
-  AlertCircle,
-  Sparkles,
-  Zap,
-  Radio
+  LogOut, 
+  ChevronRight, 
+  AlertCircle, 
+  Sparkles, 
+  Zap, 
+  Radio, 
+  Globe 
 } from 'lucide-react';
 import { api } from './services/api';
 import { Match, Tournament, LeaderboardEntry, User } from './types';
@@ -23,7 +24,7 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'fixture' | 'ranking'>('dashboard');
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [selectedTournamentId, setSelectedTournamentId] = useState<string>('todos');
   const [matches, setMatches] = useState<Match[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,21 +51,33 @@ export function App() {
         setUser(JSON.parse(savedUser));
       } catch (e) {}
     }
-    loadInitialData();
+    loadInitialData('todos');
   }, []);
 
-  const loadInitialData = async () => {
+  const loadInitialData = async (tournId: string = selectedTournamentId) => {
     try {
       setLoading(true);
       const tourns = await api.getTournaments();
       setTournaments(tourns);
-      if (tourns.length > 0) {
-        setSelectedTournament(tourns[0]);
-        const matchData = await api.getTournamentMatches(tourns[0].id);
-        setMatches(matchData);
-        const rankData = await api.getTournamentLeaderboard(tourns[0].id);
-        setLeaderboard(rankData);
-      }
+      const matchData = await api.getTournamentMatches(tournId);
+      setMatches(matchData);
+      const rankData = await api.getTournamentLeaderboard(tournId);
+      setLeaderboard(rankData);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectTournament = async (tournId: string) => {
+    setSelectedTournamentId(tournId);
+    setLoading(true);
+    try {
+      const matchData = await api.getTournamentMatches(tournId);
+      setMatches(matchData);
+      const rankData = await api.getTournamentLeaderboard(tournId);
+      setLeaderboard(rankData);
     } catch (err: any) {
       console.error(err);
     } finally {
@@ -86,7 +99,7 @@ export function App() {
       setUser(data.user);
       setShowLoginModal(false);
       setActionMessage({ text: `Bienvenido, Administrador ${data.user.username}`, type: 'success' });
-      loadInitialData();
+      loadInitialData(selectedTournamentId);
     } catch (err: any) {
       setLoginError(err.message || 'Error al autenticarse');
     }
@@ -103,8 +116,11 @@ export function App() {
     try {
       setLoading(true);
       await api.seedTournaments();
-      setActionMessage({ text: 'Datos semilla del Mundial 2026 importados correctamente.', type: 'success' });
-      loadInitialData();
+      setActionMessage({ 
+        text: 'Ligas mundiales y partidos (Champions League, Premier League, La Liga, Serie A, Libertadores, Mundial 2026) importados correctamente.', 
+        type: 'success' 
+      });
+      await loadInitialData(selectedTournamentId);
     } catch (err: any) {
       setActionMessage({ text: err.message || 'Error al importar datos semilla', type: 'error' });
     } finally {
@@ -115,17 +131,12 @@ export function App() {
   const handleSyncApi = async (modo?: 'live' | 'simular') => {
     try {
       setIsSyncing(true);
-      const summary = await api.syncMatchesWithApi(modo);
+      const summary = await api.syncMatchesWithApi(modo, selectedTournamentId);
       setActionMessage({
         text: `⚡ ${summary.mensaje}`,
         type: summary.partidosFinalizados > 0 || summary.partidosProcesados > 0 ? 'success' : 'error'
       });
-      if (selectedTournament) {
-        const updatedMatches = await api.getTournamentMatches(selectedTournament.id);
-        setMatches(updatedMatches);
-        const updatedRanking = await api.getTournamentLeaderboard(selectedTournament.id);
-        setLeaderboard(updatedRanking);
-      }
+      await loadInitialData(selectedTournamentId);
     } catch (err: any) {
       setActionMessage({ text: err.message || 'Error al sincronizar con la API de deportes', type: 'error' });
     } finally {
@@ -155,13 +166,7 @@ export function App() {
         type: 'success'
       });
       setSelectedMatch(null);
-      // Refrescar fixture y ranking
-      if (selectedTournament) {
-        const updatedMatches = await api.getTournamentMatches(selectedTournament.id);
-        setMatches(updatedMatches);
-        const updatedRanking = await api.getTournamentLeaderboard(selectedTournament.id);
-        setLeaderboard(updatedRanking);
-      }
+      await loadInitialData(selectedTournamentId);
     } catch (err: any) {
       setActionMessage({ text: err.message || 'Error al liquidar el partido', type: 'error' });
     } finally {
@@ -187,10 +192,10 @@ export function App() {
                   ChaProde
                 </span>
                 <span className="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 font-semibold rounded-md border border-slate-700">
-                  Backoffice v1.0
+                  Backoffice Global
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Portal de Operaciones y Liquidación de Partidos</p>
+              <p className="text-xs text-slate-400">Portal de Operaciones y Liquidación de Partidos Mundiales</p>
             </div>
           </div>
 
@@ -255,6 +260,45 @@ export function App() {
           </button>
         </div>
       </header>
+
+      {/* SELECTOR DE COMPETICIÓN / TORNEO MUNDIAL */}
+      <section className="bg-slate-950/40 border-b border-slate-800/80 py-3">
+        <div className="max-w-7xl mx-auto px-6 flex items-center gap-2 overflow-x-auto scrollbar-none">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-2 flex items-center gap-1.5 shrink-0">
+            <Globe className="w-3.5 h-3.5 text-sky-400" /> Filtrar Liga:
+          </span>
+
+          <button
+            onClick={() => handleSelectTournament('todos')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap border shrink-0 ${
+              selectedTournamentId === 'todos'
+                ? 'bg-sky-500/20 text-sky-400 border-sky-500/40 shadow-sm'
+                : 'bg-slate-850 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+            }`}
+          >
+            <span>🌍</span> Todas las Ligas
+          </button>
+
+          {tournaments.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => handleSelectTournament(t.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap border shrink-0 ${
+                selectedTournamentId === t.id
+                  ? 'bg-sky-500/20 text-sky-400 border-sky-500/40 shadow-sm'
+                  : 'bg-slate-850 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              {t.logoUrl ? (
+                <img src={t.logoUrl} alt={t.nombre} className="w-4 h-4 object-contain" />
+              ) : (
+                <span>🏆</span>
+              )}
+              {t.nombre}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* MENSAJE DE ESTADO / TOAST */}
       {actionMessage && (
@@ -333,14 +377,14 @@ export function App() {
                 <div>
                   <div className="flex items-center justify-between">
                     <h4 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-amber-400" /> Sincronización Automática con API
+                      <Zap className="w-4 h-4 text-amber-400" /> Sincronización Mundial con API de Deportes
                     </h4>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       <Radio className="w-3 h-3 animate-pulse" /> Scheduler Activo
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-2">
-                    Consulta el proveedor deportivo (Football-Data / API externa) o ejecuta la simulación de marcadores para liquidar pronósticos automáticamente.
+                    Trae y actualiza partidos de Champions League, Premier League, La Liga, Serie A, Libertadores y Mundial desde football-data.org o simulación mundial.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -350,15 +394,15 @@ export function App() {
                     className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20"
                   >
                     <Zap className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
-                    {isSyncing ? 'Sincronizando...' : 'Sincronizar con API'}
+                    {isSyncing ? 'Sincronizando...' : '⚡ Sincronizar API Mundial'}
                   </button>
                   <button
                     onClick={() => handleSyncApi('simular')}
                     disabled={isSyncing}
                     className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 font-semibold text-xs px-4 py-2.5 rounded-xl transition border border-sky-500/30"
-                    title="Simula resultados predefinidos del Mundial 2026 para demostración"
+                    title="Simula resultados predefinidos de ligas de todo el mundo"
                   >
-                    🎮 Simular Demo
+                    🎮 Simular Demo Mundial
                   </button>
                 </div>
               </div>
@@ -366,10 +410,10 @@ export function App() {
               <div className="bg-gradient-to-r from-slate-800/80 to-slate-850/80 border border-slate-700/60 rounded-2xl p-6 flex flex-col justify-between gap-4">
                 <div>
                   <h4 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-sky-400" /> Datos Semilla del Mundial 2026
+                    <Sparkles className="w-4 h-4 text-sky-400" /> Catálogo Semilla de Ligas Mundiales
                   </h4>
                   <p className="text-xs text-slate-400 mt-2">
-                    Reinicia o re-importa la estructura base de las 8 selecciones clasificadas y los 5 partidos iniciales de prueba en PostgreSQL.
+                    Reinicia o re-importa la estructura base de torneos, clubes y selecciones (Champions, Premier, La Liga, Serie A, Libertadores y Mundial) en PostgreSQL.
                   </p>
                 </div>
                 <button
@@ -377,7 +421,7 @@ export function App() {
                   disabled={loading}
                   className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition border border-slate-600"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Re-sembrar Datos Iniciales
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Re-sembrar Ligas Mundiales
                 </button>
               </div>
             </div>
@@ -390,13 +434,15 @@ export function App() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-slate-100">Fixture de Partidos</h3>
+                  <h3 className="text-lg font-bold text-slate-100">
+                    Fixture de Partidos {selectedTournamentId !== 'todos' ? `(${matches.length})` : `Mundiales (${matches.length})`}
+                  </h3>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     <Radio className="w-2.5 h-2.5 animate-pulse" /> Sincronización Automática Activa
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Ingresa marcadores manualmente (fallback) o sincroniza automáticamente con la API de deportes externa.
+                  Ingresa marcadores manualmente (fallback) o sincroniza automáticamente con la API de deportes de todo el mundo.
                 </p>
               </div>
 
@@ -407,7 +453,7 @@ export function App() {
                   className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-md shadow-amber-500/20"
                 >
                   <Zap className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
-                  {isSyncing ? 'Sincronizando...' : 'Sincronizar API'}
+                  {isSyncing ? 'Sincronizando...' : '⚡ Sincronizar API Mundial'}
                 </button>
                 <button
                   onClick={() => handleSyncApi('simular')}
@@ -424,6 +470,7 @@ export function App() {
                 <thead>
                   <tr className="bg-slate-850 border-b border-slate-700/80 text-slate-400 uppercase tracking-wider text-[11px]">
                     <th className="py-3.5 px-4">Fecha & Hora</th>
+                    <th className="py-3.5 px-4">Competición</th>
                     <th className="py-3.5 px-4 text-right">Equipo Local</th>
                     <th className="py-3.5 px-4 text-center">Resultado</th>
                     <th className="py-3.5 px-4">Equipo Visitante</th>
@@ -432,49 +479,67 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {matches.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-4 px-4 text-slate-400 whitespace-nowrap">
-                        {m.fechaPartido.replace('T', ' ').replace('Z', ' UTC')}
-                      </td>
-                      <td className="py-4 px-4 text-right font-bold text-slate-200">
-                        {m.equipoLocal.nombre}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        {m.golesLocal !== null && m.golesVisitante !== null ? (
-                          <span className="font-mono text-sm font-black bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg text-amber-400">
-                            {m.golesLocal} - {m.golesVisitante}
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 font-bold">VS</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-4 font-bold text-slate-200">
-                        {m.equipoVisitante.nombre}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                            m.estado === 'FINALIZADO'
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                              : m.estado === 'EN_JUEGO'
-                              ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse'
-                              : 'bg-sky-500/10 text-sky-400 border-sky-500/20'
-                          }`}
-                        >
-                          {m.estado}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <button
-                          onClick={() => openSettleModal(m)}
-                          className="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
-                        >
-                          {m.estado === 'FINALIZADO' ? 'Modificar' : 'Cargar Resultado'}
-                        </button>
+                  {matches.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-slate-500">
+                        No hay partidos disponibles en esta competición.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    matches.map((m) => (
+                      <tr key={m.id} className="hover:bg-slate-800/40 transition">
+                        <td className="py-4 px-4 text-slate-400 whitespace-nowrap">
+                          {m.fechaPartido.replace('T', ' ').replace('Z', ' UTC')}
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-850 text-sky-400 border border-slate-700 inline-flex items-center gap-1.5">
+                            {m.torneoLogoUrl ? (
+                              <img src={m.torneoLogoUrl} alt="" className="w-3.5 h-3.5 object-contain" />
+                            ) : (
+                              <span>🏆</span>
+                            )}
+                            {m.torneoNombre || 'Mundial 2026'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-right font-bold text-slate-200">
+                          {m.equipoLocal.nombre}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {m.golesLocal !== null && m.golesVisitante !== null ? (
+                            <span className="font-mono text-sm font-black bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg text-amber-400">
+                              {m.golesLocal} - {m.golesVisitante}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 font-bold">VS</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 font-bold text-slate-200">
+                          {m.equipoVisitante.nombre}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+                              m.estado === 'FINALIZADO'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : m.estado === 'EN_JUEGO'
+                                ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse'
+                                : 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                            }`}
+                          >
+                            {m.estado}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <button
+                            onClick={() => openSettleModal(m)}
+                            className="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm"
+                          >
+                            {m.estado === 'FINALIZADO' ? 'Modificar' : 'Cargar Resultado'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -485,9 +550,11 @@ export function App() {
         {activeTab === 'ranking' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-100">Tabla de Posiciones Oficial</h3>
+              <h3 className="text-lg font-bold text-slate-100">
+                Tabla de Posiciones {selectedTournamentId !== 'todos' ? `(${tournaments.find(t => t.id === selectedTournamentId)?.nombre || 'Torneo'})` : 'Global'}
+              </h3>
               <p className="text-xs text-slate-400">
-                Puntuaciones consolidadas del torneo calculadas automáticamente tras cada resultado liquidado.
+                Puntuaciones calculadas automáticamente tras cada resultado liquidado de partidos de todo el mundo.
               </p>
             </div>
 
@@ -507,7 +574,7 @@ export function App() {
                   {leaderboard.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-8 text-slate-500">
-                        Aún no hay usuarios con puntos liquidados en este torneo.
+                        Aún no hay usuarios con puntos liquidados en esta competición.
                       </td>
                     </tr>
                   ) : (

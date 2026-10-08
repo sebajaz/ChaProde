@@ -17,6 +17,9 @@ export interface Team {
 export interface Match {
   id: string;
   torneoId: string;
+  torneoNombre?: string;
+  torneoCodigo?: string;
+  torneoLogoUrl?: string;
   equipoLocal: Team;
   equipoVisitante: Team;
   fechaPartido: string;
@@ -30,6 +33,7 @@ export interface Tournament {
   id: string;
   nombre: string;
   codigoExterno: string | null;
+  logoUrl?: string | null;
   fechaInicio: string;
   fechaFin: string;
   activo: boolean;

@@ -31,6 +31,22 @@ fun Route.tournamentRoutes(
             call.respond(HttpStatusCode.OK, ApiResponse.ok(partidos, "Fixture de partidos obtenido"))
         }
 
+        get("/partidos") {
+            val torneoIdParam = call.request.queryParameters["torneoId"]
+            val estadoParam = call.request.queryParameters["estado"]
+            val partidos = if (torneoIdParam.isNullOrBlank() || torneoIdParam.equals("todos", ignoreCase = true) || torneoIdParam.equals("all", ignoreCase = true)) {
+                tournamentService.getAllMatches()
+            } else {
+                tournamentService.getMatchesByTournament(torneoIdParam)
+            }
+            val filtrados = if (!estadoParam.isNullOrBlank()) {
+                partidos.filter { it.estado.equals(estadoParam, ignoreCase = true) }
+            } else {
+                partidos
+            }
+            call.respond(HttpStatusCode.OK, ApiResponse.ok(filtrados, "Partidos obtenidos exitosamente"))
+        }
+
         get("/equipos") {
             val equipos = tournamentService.getAllTeams()
             call.respond(HttpStatusCode.OK, ApiResponse.ok(equipos, "Equipos obtenidos"))
@@ -87,8 +103,21 @@ fun Route.tournamentRoutes(
             // Sincronización Automática / On-Demand con API Deportiva (Opción 3 Híbrida)
             post("/partidos/sincronizar") {
                 val modo = call.request.queryParameters["modo"]
+                val torneoId = call.request.queryParameters["torneoId"]
+                val dateFrom = call.request.queryParameters["dateFrom"]
+                val dateTo = call.request.queryParameters["dateTo"]
                 val forceSimulator = modo.equals("simular", ignoreCase = true)
-                val summary = matchSyncService.syncMatches(forceSimulator = forceSimulator)
+
+                val torneoUuid = if (!torneoId.isNullOrBlank() && !torneoId.equals("todos", ignoreCase = true) && !torneoId.equals("all", ignoreCase = true)) {
+                    tournamentService.resolveTournamentUuid(torneoId)
+                } else null
+
+                val summary = matchSyncService.syncMatches(
+                    torneoId = torneoUuid,
+                    forceSimulator = forceSimulator,
+                    dateFrom = dateFrom,
+                    dateTo = dateTo
+                )
                 call.respond(HttpStatusCode.OK, ApiResponse.ok(summary, summary.mensaje))
             }
 

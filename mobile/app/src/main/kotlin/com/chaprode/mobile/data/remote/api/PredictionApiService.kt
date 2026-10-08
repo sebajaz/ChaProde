@@ -62,6 +62,9 @@ class PredictionApiService(
                         puntosGanados = puntos,
                         cerrado = itemJson.optBoolean("cerrado", false),
                         minutosRestantesParaCierre = itemJson.optLong("minutosRestantesParaCierre", 0),
+                        torneoNombre = matchJson.optString("torneoNombre", "").takeIf { it.isNotBlank() },
+                        torneoCodigo = matchJson.optString("torneoCodigo", "").takeIf { it.isNotBlank() },
+                        torneoLogoUrl = matchJson.optString("torneoLogoUrl", "").takeIf { it.isNotBlank() },
                         editedGolesLocal = predLocal ?: 0,
                         editedGolesVisitante = predVisitante ?: 0,
                         isEdited = false

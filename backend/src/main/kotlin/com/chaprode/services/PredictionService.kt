@@ -60,18 +60,34 @@ class PredictionService(
 
     suspend fun getMyPredictions(userId: String, torneoId: String): List<PredictionDto> {
         val userUuid = UUID.fromString(userId)
+        val trimmed = torneoId.trim()
+        if (trimmed.equals("todos", ignoreCase = true) || trimmed.equals("all", ignoreCase = true)) {
+            return predictionRepository.getAllPredictionsByUser(userUuid)
+        }
         val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
         return predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
     }
 
     suspend fun getMatchesWithMyPredictions(userId: String, torneoId: String): List<MatchWithPredictionDto> {
         val userUuid = UUID.fromString(userId)
-        val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
+        val trimmed = torneoId.trim()
+        val isAll = trimmed.equals("todos", ignoreCase = true) || trimmed.equals("all", ignoreCase = true)
 
-        val matches = matchRepository.getMatchesByTournament(torneoUuid)
-        val myPredictions = predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
+        val matches = if (isAll) {
+            matchRepository.getAllMatches()
+        } else {
+            val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
+            matchRepository.getMatchesByTournament(torneoUuid)
+        }
+
+        val myPredictions = if (isAll) {
+            predictionRepository.getAllPredictionsByUser(userUuid)
+        } else {
+            val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
+            predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
+        }
+
         val predictionsMap = myPredictions.associateBy { it.partidoId }
-
         val serverNow = Clock.System.now()
 
         return matches.map { match ->

@@ -62,6 +62,20 @@ class TournamentRepository {
             .singleOrNull()
     }
 
+    suspend fun findTournamentByCodigoOrNombre(codigo: String?, nombre: String): TournamentDto? = dbQuery {
+        TorneosTable
+            .selectAll()
+            .where {
+                if (!codigo.isNullOrBlank()) {
+                    (TorneosTable.codigoExterno eq codigo) or (TorneosTable.nombre eq nombre)
+                } else {
+                    TorneosTable.nombre eq nombre
+                }
+            }
+            .map { it.toTournamentDto() }
+            .firstOrNull()
+    }
+
     suspend fun createTournament(
         nombre: String,
         codigoExterno: String? = null,
@@ -101,6 +115,20 @@ class TournamentRepository {
             .where { EquiposTable.codigoExterno eq codigo }
             .map { it.toTeamDto() }
             .singleOrNull()
+    }
+
+    suspend fun findTeamByCodigoOrNombre(codigo: String?, nombre: String): TeamDto? = dbQuery {
+        EquiposTable
+            .selectAll()
+            .where {
+                if (!codigo.isNullOrBlank()) {
+                    (EquiposTable.codigoExterno eq codigo) or (EquiposTable.nombre eq nombre)
+                } else {
+                    EquiposTable.nombre eq nombre
+                }
+            }
+            .map { it.toTeamDto() }
+            .firstOrNull()
     }
 
     suspend fun createTeam(

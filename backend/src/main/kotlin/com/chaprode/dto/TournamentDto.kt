@@ -28,6 +28,9 @@ data class TournamentDto(
 data class MatchDto(
     val id: String,
     val torneoId: String,
+    val torneoNombre: String? = null,
+    val torneoCodigo: String? = null,
+    val torneoLogoUrl: String? = null,
     val equipoLocal: TeamDto,
     val equipoVisitante: TeamDto,
     val fechaPartido: String,

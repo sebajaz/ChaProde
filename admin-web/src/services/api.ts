@@ -37,8 +37,17 @@ export const api = {
     return res.data.data || [];
   },
 
-  getTournamentMatches: async (torneoId: string): Promise<Match[]> => {
-    const res = await apiClient.get<ApiResponse<Match[]>>(`/torneos/${torneoId}/partidos`);
+  getTournamentMatches: async (torneoId?: string): Promise<Match[]> => {
+    const url = (!torneoId || torneoId === 'todos' || torneoId === 'all')
+      ? '/partidos'
+      : `/torneos/${torneoId}/partidos`;
+    const res = await apiClient.get<ApiResponse<Match[]>>(url);
+    return res.data.data || [];
+  },
+
+  getAllMatches: async (estado?: string): Promise<Match[]> => {
+    const url = estado ? `/partidos?estado=${estado}` : '/partidos';
+    const res = await apiClient.get<ApiResponse<Match[]>>(url);
     return res.data.data || [];
   },
 
@@ -67,6 +76,10 @@ export const api = {
 
   // Ranking
   getTournamentLeaderboard: async (torneoId: string): Promise<LeaderboardEntry[]> => {
+    if (torneoId === 'todos' || torneoId === 'all') {
+      const res = await apiClient.get<ApiResponse<LeaderboardEntry[]>>('/ranking/global');
+      return res.data.data || [];
+    }
     const res = await apiClient.get<ApiResponse<{ ranking: LeaderboardEntry[] }>>(`/torneos/${torneoId}/ranking`);
     return res.data.data?.ranking || [];
   },
@@ -77,8 +90,12 @@ export const api = {
   },
 
   // Sincronización Automática con API de Deportes (Opción 3 Híbrida)
-  syncMatchesWithApi: async (modo?: 'live' | 'simular'): Promise<import('../types').SyncSummary> => {
-    const url = modo ? `/admin/partidos/sincronizar?modo=${modo}` : '/admin/partidos/sincronizar';
+  syncMatchesWithApi: async (modo?: 'live' | 'simular', torneoId?: string): Promise<import('../types').SyncSummary> => {
+    const params = new URLSearchParams();
+    if (modo) params.append('modo', modo);
+    if (torneoId && torneoId !== 'todos' && torneoId !== 'all') params.append('torneoId', torneoId);
+    const queryString = params.toString();
+    const url = queryString ? `/admin/partidos/sincronizar?${queryString}` : '/admin/partidos/sincronizar';
     const res = await apiClient.post<ApiResponse<import('../types').SyncSummary>>(url);
     if (res.data.success && res.data.data) {
       return res.data.data;
