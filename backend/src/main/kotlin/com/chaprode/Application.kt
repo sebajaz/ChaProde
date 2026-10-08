@@ -6,6 +6,7 @@ import com.chaprode.routes.authRoutes
 import com.chaprode.routes.healthRoutes
 import com.chaprode.routes.leaderboardRoutes
 import com.chaprode.routes.leagueRoutes
+import com.chaprode.routes.notificationRoutes
 import com.chaprode.routes.predictionRoutes
 import com.chaprode.routes.tournamentRoutes
 import com.chaprode.security.JwtConfig
@@ -116,5 +117,6 @@ fun Application.module() {
         predictionRoutes()
         leaderboardRoutes()
         leagueRoutes()
+        notificationRoutes()
     }
 }
