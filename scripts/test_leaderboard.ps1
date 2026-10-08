@@ -79,7 +79,7 @@ foreach ($u in $usuariosDef) {
     } catch {
         try {
             $loginBody = @{
-                identifier = $u.Username
+                usernameOrEmail = $u.Username
                 password = "Password123!"
             } | ConvertTo-Json
             $res = Invoke-RestMethod -Uri "$BaseUrl/api/auth/login" -Method Post -Body $loginBody -ContentType "application/json"
