@@ -28,6 +28,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.chaprode.mobile.data.local.preferences.SessionManager.init(applicationContext)
+        com.chaprode.mobile.data.remote.ApiConfig.init(applicationContext)
         enableEdgeToEdge()
         setContent {
             ChaProdeApp()

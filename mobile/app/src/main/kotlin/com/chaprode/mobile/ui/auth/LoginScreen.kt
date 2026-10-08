@@ -200,6 +200,85 @@ fun LoginContent(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Configuración de Servidor Backend (Cambio dinámico entre Emulador y Dispositivo Físico)
+                var showServerDialog by remember { mutableStateOf(false) }
+                var currentServerUrl by remember { mutableStateOf(com.chaprode.mobile.data.remote.ApiConfig.BASE_URL) }
+                var serverInput by remember { mutableStateOf(currentServerUrl) }
+
+                TextButton(
+                    onClick = { 
+                        serverInput = currentServerUrl
+                        showServerDialog = true 
+                    },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "⚙️ Servidor: $currentServerUrl",
+                        color = Color(0xFF64748B),
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (showServerDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showServerDialog = false },
+                        title = { Text("⚙️ Servidor Backend", color = Color.White, fontWeight = FontWeight.Bold) },
+                        text = {
+                            Column {
+                                Text(
+                                    "Selecciona o escribe la IP de tu servidor backend:",
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
+                                ChaProdeTextField(
+                                    value = serverInput,
+                                    onValueChange = { serverInput = it },
+                                    label = "URL Base (ej: http://10.0.2.2:8080)"
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { serverInput = com.chaprode.mobile.data.remote.ApiConfig.DEFAULT_EMULATOR_URL },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Emulador", fontSize = 11.sp)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { serverInput = com.chaprode.mobile.data.remote.ApiConfig.DEFAULT_PC_WIFI_URL },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("PC Wi-Fi", fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    com.chaprode.mobile.data.remote.ApiConfig.setBaseUrl(serverInput)
+                                    currentServerUrl = com.chaprode.mobile.data.remote.ApiConfig.BASE_URL
+                                    showServerDialog = false
+                                }
+                            ) {
+                                Text("Guardar", fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showServerDialog = false }) {
+                                Text("Cancelar", color = Color(0xFF94A3B8))
+                            }
+                        },
+                        containerColor = Color(0xFF1E293B)
+                    )
+                }
             }
         }
     }
