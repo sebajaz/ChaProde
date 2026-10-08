@@ -9,10 +9,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copiar configuración y código fuente
-COPY index.html vite.config.ts tailwind.config.js postcss.config.js tsconfig.json tsconfig.node.json ./
+# Copiar configuración y código fuente existente
+COPY index.html vite.config.ts tailwind.config.js postcss.config.js tsconfig.json ./
 COPY src/ src/
-COPY public/ public/
 
 # Compilación de producción
 RUN npm run build
@@ -31,6 +30,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+  CMD wget -qO- http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

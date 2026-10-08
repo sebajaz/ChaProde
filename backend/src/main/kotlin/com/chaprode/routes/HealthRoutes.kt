@@ -17,18 +17,25 @@ data class HealthStatus(
 
 private val startTime = System.currentTimeMillis()
 
+private suspend fun respondHealth(call: io.ktor.server.application.ApplicationCall) {
+    val isDbHealthy = DatabaseFactory.checkHealth()
+    val status = HealthStatus(
+        status = if (isDbHealthy) "UP" else "DEGRADED",
+        database = if (isDbHealthy) "CONNECTED" else "DISCONNECTED",
+        uptimeMillis = System.currentTimeMillis() - startTime
+    )
+
+    val httpStatusCode = if (isDbHealthy) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable
+    call.respond(httpStatusCode, ApiResponse.ok(status, "Estado del servidor ChaProde"))
+}
+
 fun Route.healthRoutes() {
+    get("/health") {
+        respondHealth(call)
+    }
     route("/api/health") {
         get {
-            val isDbHealthy = DatabaseFactory.checkHealth()
-            val status = HealthStatus(
-                status = if (isDbHealthy) "UP" else "DEGRADED",
-                database = if (isDbHealthy) "CONNECTED" else "DISCONNECTED",
-                uptimeMillis = System.currentTimeMillis() - startTime
-            )
-
-            val httpStatusCode = if (isDbHealthy) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable
-            call.respond(httpStatusCode, ApiResponse.ok(status, "Estado del servidor ChaProde"))
+            respondHealth(call)
         }
     }
 }

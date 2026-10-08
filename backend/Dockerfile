@@ -10,7 +10,7 @@ RUN apk add --no-cache bash
 
 # Copiar archivos de configuración de Gradle para caché
 COPY gradle/ gradle/
-COPY gradlew build.gradle.kts settings.gradle.kts ./
+COPY gradlew build.gradle.kts settings.gradle.kts gradle.properties ./
 RUN chmod +x gradlew
 
 # Pre-descargar dependencias
@@ -44,7 +44,7 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
+  CMD wget -qO- http://localhost:8080/health || exit 1
 
 ENTRYPOINT ["./bin/chaprode-backend"]
