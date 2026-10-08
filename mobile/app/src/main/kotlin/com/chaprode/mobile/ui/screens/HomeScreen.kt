@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.*
@@ -24,6 +25,7 @@ fun HomeScreen(
     viewModel: AuthViewModel,
     onNavigateToFixture: () -> Unit = {},
     onNavigateToRanking: () -> Unit = {},
+    onNavigateToLeagues: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -33,6 +35,7 @@ fun HomeScreen(
         user = user,
         onNavigateToFixture = onNavigateToFixture,
         onNavigateToRanking = onNavigateToRanking,
+        onNavigateToLeagues = onNavigateToLeagues,
         onLogout = {
             viewModel.logout()
             onLogout()
@@ -46,6 +49,7 @@ fun HomeContent(
     user: User? = null,
     onNavigateToFixture: () -> Unit = {},
     onNavigateToRanking: () -> Unit = {},
+    onNavigateToLeagues: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     Scaffold(
@@ -176,6 +180,66 @@ fun HomeContent(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Ranking Global", fontSize = 14.sp, color = Color.White, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Card de Ligas Privadas
+            Card(
+                onClick = onNavigateToLeagues,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Color(0xFF0284C7).copy(alpha = 0.2f), shape = RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Group,
+                            contentDescription = "Ligas Privadas",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Ligas Privadas",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Compite con amigos y crea tus propios grupos",
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF334155)
+                    ) {
+                        Text(
+                            text = "Ver",
+                            color = Color(0xFF38BDF8),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
                     }
                 }
             }
