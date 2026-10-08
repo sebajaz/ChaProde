@@ -40,13 +40,13 @@ class PredictionService(
             throw IllegalArgumentException("No se pueden cargar pronósticos en partidos que ya iniciaron o finalizaron.")
         }
 
-        // Regla de los 15 minutos en hora del servidor
+        // Regla de los 5 minutos en hora del servidor
         val matchTime = Instant.parse(match.fechaPartido)
         val serverNow = Clock.System.now()
-        val cutoffTime = matchTime.minus(15.minutes)
+        val cutoffTime = matchTime.minus(5.minutes)
 
         if (serverNow >= cutoffTime) {
-            throw IllegalArgumentException("Los pronósticos para este partido cerraron 15 minutos antes de su inicio.")
+            throw IllegalArgumentException("Los pronósticos para este partido cerraron 5 minutos antes de su inicio.")
         }
 
         return predictionRepository.upsertPrediction(
@@ -75,7 +75,7 @@ class PredictionService(
 
         return matches.map { match ->
             val matchTime = Instant.parse(match.fechaPartido)
-            val cutoffTime = matchTime.minus(15.minutes)
+            val cutoffTime = matchTime.minus(5.minutes)
             val isClosed = serverNow >= cutoffTime || match.estado != "PENDIENTE"
             val remainingSeconds = cutoffTime.epochSeconds - serverNow.epochSeconds
             val remainingMinutes = if (remainingSeconds > 0) remainingSeconds / 60 else 0

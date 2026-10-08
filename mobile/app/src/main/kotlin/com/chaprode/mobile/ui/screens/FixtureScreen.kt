@@ -207,7 +207,7 @@ fun InteractiveMatchCard(
                             text = when {
                                 match.estado == "FINALIZADO" -> "FINALIZADO"
                                 match.estado == "EN_JUEGO" -> "EN JUEGO"
-                                match.cerrado -> "🔒 Cerrado (-15 min)"
+                                match.cerrado -> "🔒 Cerrado (-5 min)"
                                 else -> "⏱️ Cierra en ${match.minutosRestantesParaCierre} min"
                             },
                             color = when {
@@ -531,7 +531,7 @@ fun MatchCardOpenPreview() {
     )
 }
 
-@Preview(name = "Partido Cerrado (<15 min)", showBackground = true, backgroundColor = 0xFF0F172A)
+@Preview(name = "Partido Cerrado (<5 min)", showBackground = true, backgroundColor = 0xFF0F172A)
 @Composable
 fun MatchCardClosedPreview() {
     InteractiveMatchCard(
