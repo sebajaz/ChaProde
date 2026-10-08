@@ -4,13 +4,14 @@ import com.chaprode.mobile.model.RankingUserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.chaprode.mobile.data.remote.ApiConfig
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
 class RankingApiService(
-    private val baseUrl: String = "http://10.0.2.2:8080"
+    private val baseUrl: String = ApiConfig.BASE_URL
 ) {
 
     suspend fun getTournamentRanking(torneoId: String, currentUserId: String? = null): Result<List<RankingUserItem>> = withContext(Dispatchers.IO) {

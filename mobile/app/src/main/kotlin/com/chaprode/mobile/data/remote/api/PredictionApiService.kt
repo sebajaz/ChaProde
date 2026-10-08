@@ -7,11 +7,12 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import com.chaprode.mobile.data.remote.ApiConfig
 import java.net.HttpURLConnection
 import java.net.URL
 
 class PredictionApiService(
-    private val baseUrl: String = "http://10.0.2.2:8080"
+    private val baseUrl: String = ApiConfig.BASE_URL
 ) {
 
     suspend fun getMatchesWithPredictions(torneoId: String, token: String?): Result<List<MatchWithPredictionItem>> = withContext(Dispatchers.IO) {

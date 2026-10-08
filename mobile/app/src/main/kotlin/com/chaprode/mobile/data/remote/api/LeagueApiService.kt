@@ -7,13 +7,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.BufferedReader
+import com.chaprode.mobile.data.remote.ApiConfig
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
 class LeagueApiService(
-    private val baseUrl: String = "http://10.0.2.2:8080"
+    private val baseUrl: String = ApiConfig.BASE_URL
 ) {
 
     suspend fun getMyLeagues(token: String): Result<List<LeagueItem>> = withContext(Dispatchers.IO) {
