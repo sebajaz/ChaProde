@@ -7,7 +7,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Route.tournamentRoutes(tournamentService: TournamentService = TournamentService()) {
+fun Route.tournamentRoutes(
+    tournamentService: TournamentService = TournamentService(),
+    matchSyncService: com.chaprode.services.MatchSyncService = com.chaprode.services.MatchSyncService()
+) {
     route("/api") {
 
         // Rutas Públicas / Usuario
@@ -78,6 +81,24 @@ fun Route.tournamentRoutes(tournamentService: TournamentService = TournamentServ
                 call.respond(
                     HttpStatusCode.OK,
                     ApiResponse.ok(result, "Resultado registrado y pronósticos liquidados exitosamente")
+                )
+            }
+
+            // Sincronización Automática / On-Demand con API Deportiva (Opción 3 Híbrida)
+            post("/partidos/sincronizar") {
+                val modo = call.request.queryParameters["modo"]
+                val forceSimulator = modo.equals("simular", ignoreCase = true)
+                val summary = matchSyncService.syncMatches(forceSimulator = forceSimulator)
+                call.respond(HttpStatusCode.OK, ApiResponse.ok(summary, summary.mensaje))
+            }
+
+            // Simulación puntual de resultado para pruebas / demostración
+            post("/partidos/simular") {
+                val request = call.receive<SimulateMatchRequest>()
+                val result = matchSyncService.simulateSingleMatch(request)
+                call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse.ok(result, "Partido simulado y pronósticos liquidados exitosamente.")
                 )
             }
         }

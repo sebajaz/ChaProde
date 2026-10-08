@@ -106,14 +106,34 @@ fun Application.module() {
         }
     }
 
-    // 7. Enrutamiento
+    // 7. Configurar Servicios Deportivos y Scheduler en Segundo Plano (Opción 3 Híbrida)
+    val footballApiToken = environment.config.propertyOrNull("footballApi.token")?.getString() ?: ""
+    val footballApiBaseUrl = environment.config.propertyOrNull("footballApi.baseUrl")?.getString() ?: "https://api.football-data.org/v4"
+    val syncIntervalMinutes = environment.config.propertyOrNull("footballApi.syncIntervalMinutes")?.getString()?.toLongOrNull() ?: 15L
+    val autoSyncEnabled = environment.config.propertyOrNull("footballApi.autoSyncEnabled")?.getString()?.toBooleanStrictOrNull() ?: true
+
+    val sportsApiClient = com.chaprode.providers.FootballDataApiClient(baseUrl = footballApiBaseUrl, apiToken = footballApiToken)
+    val matchSyncService = com.chaprode.services.MatchSyncService(apiClient = sportsApiClient)
+    val matchSchedulerService = com.chaprode.services.MatchSchedulerService(
+        matchSyncService = matchSyncService,
+        intervalMinutes = syncIntervalMinutes,
+        enabled = autoSyncEnabled
+    )
+
+    matchSchedulerService.start()
+
+    monitor.subscribe(ApplicationStopped) {
+        matchSchedulerService.stop()
+    }
+
+    // 8. Enrutamiento
     routing {
         get("/") {
             call.respond(ApiResponse.ok(mapOf("app" to "ChaProde API", "version" to "1.0.0"), "Bienvenido a ChaProde API"))
         }
         healthRoutes()
         authRoutes()
-        tournamentRoutes()
+        tournamentRoutes(matchSyncService = matchSyncService)
         predictionRoutes()
         leaderboardRoutes()
         leagueRoutes()

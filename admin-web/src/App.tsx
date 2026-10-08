@@ -12,7 +12,9 @@ import {
   LogOut,
   ChevronRight,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Zap,
+  Radio
 } from 'lucide-react';
 import { api } from './services/api';
 import { Match, Tournament, LeaderboardEntry, User } from './types';
@@ -25,6 +27,7 @@ export function App() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [actionMessage, setActionMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Modal de Login
@@ -106,6 +109,27 @@ export function App() {
       setActionMessage({ text: err.message || 'Error al importar datos semilla', type: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSyncApi = async (modo?: 'live' | 'simular') => {
+    try {
+      setIsSyncing(true);
+      const summary = await api.syncMatchesWithApi(modo);
+      setActionMessage({
+        text: `⚡ ${summary.mensaje}`,
+        type: summary.partidosFinalizados > 0 || summary.partidosProcesados > 0 ? 'success' : 'error'
+      });
+      if (selectedTournament) {
+        const updatedMatches = await api.getTournamentMatches(selectedTournament.id);
+        setMatches(updatedMatches);
+        const updatedRanking = await api.getTournamentLeaderboard(selectedTournament.id);
+        setLeaderboard(updatedRanking);
+      }
+    } catch (err: any) {
+      setActionMessage({ text: err.message || 'Error al sincronizar con la API de deportes', type: 'error' });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -303,23 +327,59 @@ export function App() {
               </div>
             </div>
 
-            {/* BANNER DE ACCIONES */}
-            <div className="bg-gradient-to-r from-slate-800/80 to-slate-850/80 border border-slate-700/60 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <h4 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" /> Sincronización del Mundial FIFA 2026
-                </h4>
-                <p className="text-xs text-slate-400 mt-1">
-                  Reinicia o sincroniza los 8 equipos clasificados y los 5 partidos iniciales de prueba en la base de datos.
-                </p>
+            {/* BANNER DE ACCIONES Y SINCRONIZACIÓN AUTOMÁTICA */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="bg-gradient-to-r from-slate-800/80 to-slate-850/80 border border-slate-700/60 rounded-2xl p-6 flex flex-col justify-between gap-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-400" /> Sincronización Automática con API
+                    </h4>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <Radio className="w-3 h-3 animate-pulse" /> Scheduler Activo
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Consulta el proveedor deportivo (Football-Data / API externa) o ejecuta la simulación de marcadores para liquidar pronósticos automáticamente.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleSyncApi()}
+                    disabled={isSyncing}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-lg shadow-amber-500/20"
+                  >
+                    <Zap className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
+                    {isSyncing ? 'Sincronizando...' : 'Sincronizar con API'}
+                  </button>
+                  <button
+                    onClick={() => handleSyncApi('simular')}
+                    disabled={isSyncing}
+                    className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 font-semibold text-xs px-4 py-2.5 rounded-xl transition border border-sky-500/30"
+                    title="Simula resultados predefinidos del Mundial 2026 para demostración"
+                  >
+                    🎮 Simular Demo
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={handleSeedData}
-                disabled={loading}
-                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition border border-slate-600"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Re-sembrar Datos
-              </button>
+
+              <div className="bg-gradient-to-r from-slate-800/80 to-slate-850/80 border border-slate-700/60 rounded-2xl p-6 flex flex-col justify-between gap-4">
+                <div>
+                  <h4 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-sky-400" /> Datos Semilla del Mundial 2026
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Reinicia o re-importa la estructura base de las 8 selecciones clasificadas y los 5 partidos iniciales de prueba en PostgreSQL.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSeedData}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition border border-slate-600"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Re-sembrar Datos Iniciales
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -327,12 +387,35 @@ export function App() {
         {/* PESTAÑA 2: FIXTURE & CARGA DE RESULTADOS */}
         {activeTab === 'fixture' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-100">Fixture de Partidos</h3>
-                <p className="text-xs text-slate-400">
-                  Ingresa los marcadores oficiales. Al guardar, el motor liquidará automáticamente los pronósticos (3, 1 o 0 puntos).
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold text-slate-100">Fixture de Partidos</h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Radio className="w-2.5 h-2.5 animate-pulse" /> Sincronización Automática Activa
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Ingresa marcadores manualmente (fallback) o sincroniza automáticamente con la API de deportes externa.
                 </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleSyncApi()}
+                  disabled={isSyncing}
+                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-md shadow-amber-500/20"
+                >
+                  <Zap className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
+                  {isSyncing ? 'Sincronizando...' : 'Sincronizar API'}
+                </button>
+                <button
+                  onClick={() => handleSyncApi('simular')}
+                  disabled={isSyncing}
+                  className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 font-semibold text-xs px-3.5 py-2 rounded-xl transition border border-sky-500/30"
+                >
+                  🎮 Simular Marcadores
+                </button>
               </div>
             </div>
 

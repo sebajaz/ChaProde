@@ -75,4 +75,27 @@ export const api = {
     const res = await apiClient.get<ApiResponse<LeaderboardEntry[]>>('/ranking/global');
     return res.data.data || [];
   },
+
+  // Sincronización Automática con API de Deportes (Opción 3 Híbrida)
+  syncMatchesWithApi: async (modo?: 'live' | 'simular'): Promise<import('../types').SyncSummary> => {
+    const url = modo ? `/admin/partidos/sincronizar?modo=${modo}` : '/admin/partidos/sincronizar';
+    const res = await apiClient.post<ApiResponse<import('../types').SyncSummary>>(url);
+    if (res.data.success && res.data.data) {
+      return res.data.data;
+    }
+    throw new Error(res.data.error || 'Error al sincronizar con la API de deportes');
+  },
+
+  simulateMatch: async (partidoId: string, golesLocal: number, golesVisitante: number): Promise<MatchResultResponse> => {
+    const res = await apiClient.post<ApiResponse<MatchResultResponse>>('/admin/partidos/simular', {
+      partidoId,
+      golesLocal,
+      golesVisitante,
+      estado: 'FINALIZADO',
+    });
+    if (res.data.success && res.data.data) {
+      return res.data.data;
+    }
+    throw new Error(res.data.error || 'Error al simular el partido');
+  },
 };

@@ -92,6 +92,104 @@ class MatchRepository {
             .singleOrNull()
     }
 
+    suspend fun getPendingOrLiveMatches(torneoId: UUID? = null): List<MatchDto> = dbQuery {
+        val localEquipos = EquiposTable.alias("local_equipos")
+        val visitanteEquipos = EquiposTable.alias("visitante_equipos")
+
+        val query = PartidosTable
+            .join(localEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoLocalId eq localEquipos[EquiposTable.id] })
+            .join(visitanteEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoVisitanteId eq visitanteEquipos[EquiposTable.id] })
+            .selectAll()
+            .where { PartidosTable.estado inList listOf("PENDIENTE", "EN_JUEGO") }
+
+        if (torneoId != null) {
+            query.andWhere { PartidosTable.torneoId eq torneoId }
+        }
+
+        query.orderBy(PartidosTable.fechaPartido, SortOrder.ASC)
+            .map { row ->
+                val localDto = TeamDto(
+                    id = row[localEquipos[EquiposTable.id]].value.toString(),
+                    nombre = row[localEquipos[EquiposTable.nombre]],
+                    codigoExterno = row[localEquipos[EquiposTable.codigoExterno]],
+                    urlBandera = row[localEquipos[EquiposTable.urlBandera]],
+                    codigoIso = row[localEquipos[EquiposTable.codigoIso]]
+                )
+                val visitanteDto = TeamDto(
+                    id = row[visitanteEquipos[EquiposTable.id]].value.toString(),
+                    nombre = row[visitanteEquipos[EquiposTable.nombre]],
+                    codigoExterno = row[visitanteEquipos[EquiposTable.codigoExterno]],
+                    urlBandera = row[visitanteEquipos[EquiposTable.urlBandera]],
+                    codigoIso = row[visitanteEquipos[EquiposTable.codigoIso]]
+                )
+
+                MatchDto(
+                    id = row[PartidosTable.id].value.toString(),
+                    torneoId = row[PartidosTable.torneoId].value.toString(),
+                    equipoLocal = localDto,
+                    equipoVisitante = visitanteDto,
+                    fechaPartido = row[PartidosTable.fechaPartido].toString(),
+                    golesLocal = row[PartidosTable.golesLocal],
+                    golesVisitante = row[PartidosTable.golesVisitante],
+                    estado = row[PartidosTable.estado],
+                    codigoExterno = row[PartidosTable.codigoExterno]
+                )
+            }
+    }
+
+    suspend fun updateMatchLiveScore(
+        partidoId: UUID,
+        golesLocal: Int,
+        golesVisitante: Int,
+        estado: String = "EN_JUEGO"
+    ): Unit = dbQuery {
+        PartidosTable.update({ PartidosTable.id eq partidoId }) {
+            it[PartidosTable.golesLocal] = golesLocal
+            it[PartidosTable.golesVisitante] = golesVisitante
+            it[PartidosTable.estado] = estado
+        }
+    }
+
+    suspend fun getMatchByExternalCode(codigoExterno: String): MatchDto? = dbQuery {
+        val localEquipos = EquiposTable.alias("local_equipos")
+        val visitanteEquipos = EquiposTable.alias("visitante_equipos")
+
+        PartidosTable
+            .join(localEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoLocalId eq localEquipos[EquiposTable.id] })
+            .join(visitanteEquipos, JoinType.INNER, additionalConstraint = { PartidosTable.equipoVisitanteId eq visitanteEquipos[EquiposTable.id] })
+            .selectAll()
+            .where { PartidosTable.codigoExterno eq codigoExterno }
+            .map { row ->
+                val localDto = TeamDto(
+                    id = row[localEquipos[EquiposTable.id]].value.toString(),
+                    nombre = row[localEquipos[EquiposTable.nombre]],
+                    codigoExterno = row[localEquipos[EquiposTable.codigoExterno]],
+                    urlBandera = row[localEquipos[EquiposTable.urlBandera]],
+                    codigoIso = row[localEquipos[EquiposTable.codigoIso]]
+                )
+                val visitanteDto = TeamDto(
+                    id = row[visitanteEquipos[EquiposTable.id]].value.toString(),
+                    nombre = row[visitanteEquipos[EquiposTable.nombre]],
+                    codigoExterno = row[visitanteEquipos[EquiposTable.codigoExterno]],
+                    urlBandera = row[visitanteEquipos[EquiposTable.urlBandera]],
+                    codigoIso = row[visitanteEquipos[EquiposTable.codigoIso]]
+                )
+
+                MatchDto(
+                    id = row[PartidosTable.id].value.toString(),
+                    torneoId = row[PartidosTable.torneoId].value.toString(),
+                    equipoLocal = localDto,
+                    equipoVisitante = visitanteDto,
+                    fechaPartido = row[PartidosTable.fechaPartido].toString(),
+                    golesLocal = row[PartidosTable.golesLocal],
+                    golesVisitante = row[PartidosTable.golesVisitante],
+                    estado = row[PartidosTable.estado],
+                    codigoExterno = row[PartidosTable.codigoExterno]
+                )
+            }
+            .singleOrNull()
+    }
+
     suspend fun createMatch(
         torneoId: UUID,
         equipoLocalId: UUID,

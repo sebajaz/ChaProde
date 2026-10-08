@@ -68,6 +68,15 @@ export interface MatchResultResponse {
   totalPuntosOtorgados: number;
 }
 
+export interface SyncSummary {
+  partidosProcesados: number;
+  partidosFinalizados: number;
+  pronosticosLiquidados: number;
+  puntosOtorgados: number;
+  mensaje: string;
+  detalles: string[];
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
