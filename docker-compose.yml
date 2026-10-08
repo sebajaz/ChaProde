@@ -1,0 +1,80 @@
+services:
+  # 🗄️ 1. BASE DE DATOS POSTGRESQL 17
+  db:
+    image: postgres:17-alpine
+    container_name: chaprode-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chaprode_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prodepw}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/01_initial_schema.sql:/docker-entrypoint-initdb.d/01_initial_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d chaprode_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chaprode-network
+
+  # 🖥️ 2. BACKEND KTOR (KOTLIN 2.1 + NETTY)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chaprode-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      DB_JDBC_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-chaprode_db}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-prodepw}
+      JWT_SECRET: ${JWT_SECRET:-chaprode_super_secret_jwt_key_2026_very_long_and_safe_token}
+      FOOTBALL_API_TOKEN: ${FOOTBALL_API_TOKEN:-}
+      FOOTBALL_API_SYNC_INTERVAL: ${FOOTBALL_API_SYNC_INTERVAL:-15}
+      FOOTBALL_API_AUTO_SYNC: ${FOOTBALL_API_AUTO_SYNC:-true}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - chaprode-network
+
+  # 💻 3. PORTAL WEB DE ADMINISTRACIÓN (REACT + NGINX)
+  admin-web:
+    build:
+      context: ./admin-web
+      dockerfile: Dockerfile
+    container_name: chaprode-admin-web
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-80}:80"
+      - "${DEV_WEB_PORT:-3000}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - chaprode-network
+
+networks:
+  chaprode-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local

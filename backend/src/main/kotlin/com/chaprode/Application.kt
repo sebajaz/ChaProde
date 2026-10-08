@@ -33,10 +33,24 @@ fun Application.module() {
     val log = LoggerFactory.getLogger("ChaProdeApplication")
     log.info("Inicializando ChaProde Backend...")
 
-    // 1. Inicializar Base de Datos PostgreSQL
+    // 1. Inicializar Base de Datos PostgreSQL y Auto-Seed
     try {
         DatabaseFactory.init(environment.config)
         log.info("Base de datos inicializada y conectada exitosamente.")
+
+        kotlinx.coroutines.runBlocking {
+            try {
+                val authService = com.chaprode.services.AuthService()
+                authService.seedDefaultAdminIfNotExists()
+                val tournamentService = com.chaprode.services.TournamentService()
+                if (tournamentService.getActiveTournaments().isEmpty()) {
+                    log.info("Base de datos vacía. Sembrando datos iniciales del Mundial 2026...")
+                    tournamentService.seedData()
+                }
+            } catch (e: Exception) {
+                log.warn("Auto-semilla de datos iniciales omitida: {}", e.message)
+            }
+        }
     } catch (e: Exception) {
         log.error("Fallo al inicializar la base de datos: {}", e.message)
     }

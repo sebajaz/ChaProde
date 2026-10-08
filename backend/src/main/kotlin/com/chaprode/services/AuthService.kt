@@ -99,4 +99,20 @@ class AuthService(
         return userRepository.findById(uuid)
             ?: throw IllegalArgumentException("Usuario no encontrado.")
     }
+
+    suspend fun seedDefaultAdminIfNotExists(
+        username: String = "admin",
+        email: String = "admin@chaprode.com",
+        password: String = "prodepw"
+    ) {
+        if (userRepository.findByUsername(username) == null && userRepository.findByEmail(email) == null) {
+            val passwordHash = SecurityUtils.hashPassword(password)
+            userRepository.createUser(
+                username = username,
+                email = email,
+                passwordHash = passwordHash,
+                rol = "ADMIN"
+            )
+        }
+    }
 }
