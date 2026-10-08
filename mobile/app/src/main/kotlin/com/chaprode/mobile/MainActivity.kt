@@ -27,6 +27,7 @@ import com.chaprode.mobile.ui.screens.RankingScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.chaprode.mobile.data.local.preferences.SessionManager.init(applicationContext)
         enableEdgeToEdge()
         setContent {
             ChaProdeApp()
@@ -42,11 +43,13 @@ fun ChaProdeApp() {
     val rankingViewModel = RankingViewModel()
     val leagueViewModel = LeagueViewModel()
 
+    val startDest = if (com.chaprode.mobile.data.local.preferences.SessionManager.isLoggedIn()) Screen.Home.route else Screen.Login.route
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        NavHost(navController = navController, startDestination = Screen.Login.route) {
+        NavHost(navController = navController, startDestination = startDest) {
             composable(Screen.Login.route) {
                 LoginScreen(
                     viewModel = authViewModel,

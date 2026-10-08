@@ -68,8 +68,10 @@ class PredictionService(
         return predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
     }
 
-    suspend fun getMatchesWithMyPredictions(userId: String, torneoId: String): List<MatchWithPredictionDto> {
-        val userUuid = UUID.fromString(userId)
+    suspend fun getMatchesWithMyPredictions(userId: String?, torneoId: String): List<MatchWithPredictionDto> {
+        val userUuid = if (!userId.isNullOrBlank()) {
+            try { UUID.fromString(userId) } catch (e: Exception) { null }
+        } else null
         val trimmed = torneoId.trim()
         val isAll = trimmed.equals("todos", ignoreCase = true) || trimmed.equals("all", ignoreCase = true)
 
@@ -80,11 +82,15 @@ class PredictionService(
             matchRepository.getMatchesByTournament(torneoUuid)
         }
 
-        val myPredictions = if (isAll) {
-            predictionRepository.getAllPredictionsByUser(userUuid)
+        val myPredictions = if (userUuid != null) {
+            if (isAll) {
+                predictionRepository.getAllPredictionsByUser(userUuid)
+            } else {
+                val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
+                predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
+            }
         } else {
-            val torneoUuid = tournamentService.resolveTournamentUuid(torneoId)
-            predictionRepository.getPredictionsByUserAndTournament(userUuid, torneoUuid)
+            emptyList()
         }
 
         val predictionsMap = myPredictions.associateBy { it.partidoId }

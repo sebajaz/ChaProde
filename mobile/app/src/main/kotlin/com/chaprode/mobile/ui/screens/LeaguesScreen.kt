@@ -3,6 +3,7 @@ package com.chaprode.mobile.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chaprode.mobile.data.local.preferences.SessionManager
 import com.chaprode.mobile.model.LeagueItem
 import com.chaprode.mobile.model.RankingUserItem
 import com.chaprode.mobile.ui.components.ChaProdeButton
@@ -61,6 +64,10 @@ fun LeaguesContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        onEvent(LeagueUiEvent.LoadLeagues)
+    }
+
     LaunchedEffect(state.successMessage, state.errorMessage) {
         state.successMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -88,6 +95,15 @@ fun LeaguesContent(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
+                            tint = Color.White
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onEvent(LeagueUiEvent.LoadLeagues) }) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Actualizar",
                             tint = Color.White
                         )
                     }
@@ -135,7 +151,7 @@ fun LeaguesContent(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Tus Ligas",
+                text = if (state.leagues.isNotEmpty()) "Tus Ligas Participantes (${state.leagues.size})" else "Tus Ligas",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -314,6 +330,9 @@ fun LeagueCard(
     onCopyCode: () -> Unit,
     onViewLeaderboard: () -> Unit
 ) {
+    val currentUserId = SessionManager.getUser()?.id
+    val isCreator = league.creadorId == currentUserId
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -330,7 +349,8 @@ fun LeagueCard(
                     text = league.nombre,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = Color.White,
+                    modifier = Modifier.weight(1f)
                 )
 
                 Surface(
@@ -348,11 +368,56 @@ fun LeagueCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Badge de rol (Creador vs Participante)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isCreator) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.2f),
+                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = "👑 Administrador",
+                            color = Color(0xFFFBBF24),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF38BDF8).copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = "⚽ Participante",
+                            color = Color(0xFF38BDF8),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (isCreator) "Creada por ti" else "Creador: @${league.creadorUsername}",
+                    color = Color(0xFF94A3B8),
+                    fontSize = 12.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
                 text = "Torneo: ${league.torneoNombre}",
-                color = Color(0xFF94A3B8),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 2.dp)
+                color = Color(0xFF64748B),
+                fontSize = 12.sp
             )
 
             Spacer(modifier = Modifier.height(14.dp))

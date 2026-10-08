@@ -23,7 +23,9 @@ class TournamentService(
         if (trimmed.isNullOrBlank() || 
             trimmed.equals("activo", ignoreCase = true) || 
             trimmed.equals("default", ignoreCase = true) || 
-            trimmed.equals("current", ignoreCase = true)) {
+            trimmed.equals("current", ignoreCase = true) ||
+            trimmed.equals("todos", ignoreCase = true) ||
+            trimmed.equals("all", ignoreCase = true)) {
             val active = tournamentRepository.getAllActiveTournaments().firstOrNull()
                 ?: throw IllegalArgumentException("No hay torneos activos disponibles.")
             return UUID.fromString(active.id)
