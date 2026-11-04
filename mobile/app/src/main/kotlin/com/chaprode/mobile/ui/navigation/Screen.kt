@@ -7,4 +7,5 @@ sealed class Screen(val route: String) {
     object Fixture : Screen("fixture")
     object Ranking : Screen("ranking")
     object Leagues : Screen("leagues")
+    object Profile : Screen("profile")
 }
