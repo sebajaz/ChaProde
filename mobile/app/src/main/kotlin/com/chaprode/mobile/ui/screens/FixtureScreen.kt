@@ -135,7 +135,7 @@ fun FixtureContent(
                             letterSpacing = 1.2.sp
                         )
                         Text(
-                            text = "Fixture",
+                            text = if (torneoNombre.isNotBlank() && torneoNombre != "Partidos Mundiales") "Fixture · $torneoNombre" else "Fixture",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White

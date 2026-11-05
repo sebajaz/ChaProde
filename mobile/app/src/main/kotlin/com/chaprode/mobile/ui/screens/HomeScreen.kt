@@ -48,6 +48,7 @@ import com.chaprode.mobile.ui.theme.*
 import kotlinx.coroutines.delay
 import java.util.Calendar
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun HomeScreen(
     viewModel: AuthViewModel,
