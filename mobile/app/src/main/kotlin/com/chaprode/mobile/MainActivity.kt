@@ -187,6 +187,8 @@ fun ChaProdeApp() {
 
                 composable(Screen.Profile.route) {
                     ProfileScreen(
+                        predictionViewModel = predictionViewModel,
+                        rankingViewModel = rankingViewModel,
                         onLogout = {
                             SessionManager.clearSession()
                             navController.navigate(Screen.Login.route) {
