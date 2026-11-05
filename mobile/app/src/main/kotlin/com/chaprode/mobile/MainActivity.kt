@@ -79,7 +79,6 @@ fun ChaProdeApp() {
                     onNavigate = { targetScreen ->
                         if (currentRoute != targetScreen.route) {
                             navController.navigate(targetScreen.route) {
-                                // Patrón recomendado de Compose para preservar estados de pestañas y evitar duplicados
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
@@ -128,6 +127,9 @@ fun ChaProdeApp() {
                 composable(Screen.Home.route) {
                     HomeScreen(
                         viewModel = authViewModel,
+                        predictionViewModel = predictionViewModel,
+                        rankingViewModel = rankingViewModel,
+                        leagueViewModel = leagueViewModel,
                         onNavigateToFixture = {
                             navController.navigate(Screen.Fixture.route) {
                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
