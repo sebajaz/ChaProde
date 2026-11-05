@@ -3,9 +3,9 @@ package com.chaprode.mobile.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,19 +14,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,31 +44,35 @@ import com.chaprode.mobile.ui.components.ChaProdeTextField
 import com.chaprode.mobile.ui.league.LeagueUiEvent
 import com.chaprode.mobile.ui.league.LeagueUiState
 import com.chaprode.mobile.ui.league.LeagueViewModel
+import com.chaprode.mobile.ui.theme.*
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeaguesScreen(
     viewModel: LeagueViewModel,
-    onNavigateBack: () -> Unit
+    showBack: Boolean = false,
+    onNavigateBack: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
 
     LeaguesContent(
         state = state,
         onEvent = viewModel::onEvent,
+        showBack = showBack,
         onNavigateBack = onNavigateBack
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeaguesContent(
     state: LeagueUiState,
     onEvent: (LeagueUiEvent) -> Unit,
-    onNavigateBack: () -> Unit
+    showBack: Boolean = false,
+    onNavigateBack: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         onEvent(LeagueUiEvent.LoadLeagues)
@@ -80,113 +90,128 @@ fun LeaguesContent(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "👥 Ligas Privadas",
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFBBF24),
-                        fontSize = 20.sp
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { onEvent(LeagueUiEvent.LoadLeagues) }) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Actualizar",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFF0F172A)
+        containerColor = ChaProdeBg
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
-            // Acciones Rápidas: Crear Liga y Unirse con Código
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = { onEvent(LeagueUiEvent.OnOpenCreateDialog(true)) },
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Crear Liga", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-
-                Button(
-                    onClick = { onEvent(LeagueUiEvent.OnOpenJoinDialog(true)) },
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155))
-                ) {
-                    Icon(Icons.Default.Key, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Unirme", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = if (state.leagues.isNotEmpty()) "Tus Ligas Participantes (${state.leagues.size})" else "Tus Ligas",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 12.dp)
+            // Cabecera superior con botón de actualizar (y volver si corresponde)
+            LeaguesTopBar(
+                showBack = showBack,
+                onNavigateBack = onNavigateBack,
+                onRefresh = { onEvent(LeagueUiEvent.LoadLeagues) }
             )
 
-            if (state.isLoading && state.leagues.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF38BDF8))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(bottom = 28.dp)
+            ) {
+                // 1. BANNER HÉROE (Figma Make: .league-banner)
+                item {
+                    LeagueBanner()
                 }
-            } else if (state.leagues.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.Group,
-                            contentDescription = null,
-                            tint = Color(0xFF475569),
-                            modifier = Modifier.size(60.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+
+                // 2. BOTONES DE ACCIÓN: CREAR Y UNIRSE (Figma Make: .league-actions)
+                item {
+                    LeagueActionsRow(
+                        onCreateClick = { onEvent(LeagueUiEvent.OnOpenCreateDialog(true)) },
+                        onJoinClick = { onEvent(LeagueUiEvent.OnOpenJoinDialog(true)) }
+                    )
+                }
+
+                // 3. TÍTULO DE SECCIÓN
+                item {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Column {
                         Text(
-                            text = "Aún no perteneces a ninguna liga privada.\n¡Crea una con tus amigos o únete con un código!",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center
+                            text = "TUS COMUNIDADES",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.2.sp,
+                            color = ChaProdeGold
+                        )
+                        Text(
+                            text = if (state.leagues.isNotEmpty()) "Mis Ligas (${state.leagues.size})" else "Mis Ligas",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ChaProdeText,
+                            letterSpacing = (-0.5).sp
                         )
                     }
                 }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
+
+                // 4. LISTADO O ESTADOS DE CARGA/VACÍO
+                if (state.isLoading && state.leagues.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = ChaProdeSky, strokeWidth = 3.dp)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Cargando tus ligas...",
+                                    color = ChaProdeMuted,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+                } else if (state.leagues.isEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = ChaProdeSurface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ChaProdeBorder)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(28.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .background(ChaProdeSky.copy(alpha = 0.1f), shape = CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Group,
+                                        contentDescription = null,
+                                        tint = ChaProdeSky,
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Sin Ligas Privadas Aún",
+                                    fontWeight = FontWeight.Bold,
+                                    color = ChaProdeText,
+                                    fontSize = 16.sp
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Crea un grupo con tus amigos o ingresa con un código de invitación para competir en privado.",
+                                    color = ChaProdeMuted,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else {
                     items(state.leagues, key = { it.id }) { league ->
                         LeagueCard(
                             league = league,
@@ -194,6 +219,9 @@ fun LeaguesContent(
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 val clip = ClipData.newPlainText("Código de Liga", league.codigoAcceso)
                                 clipboard.setPrimaryClip(clip)
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Código '${league.codigoAcceso}' copiado al portapapeles")
+                                }
                             },
                             onViewLeaderboard = {
                                 onEvent(LeagueUiEvent.OnSelectLeague(league.id))
@@ -205,125 +233,253 @@ fun LeaguesContent(
         }
     }
 
-    // DIÁLOGO CREAR LIGA
+    // DIÁLOGO CREAR LIGA (Figma Make: .modal)
     if (state.isCreateDialogOpen) {
-        AlertDialog(
-            onDismissRequest = { onEvent(LeagueUiEvent.OnOpenCreateDialog(false)) },
-            title = { Text("🏆 Crear Nueva Liga", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text(
-                        text = "Elige un nombre para tu liga privada e invita a tus amigos a competir.",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    ChaProdeTextField(
-                        value = state.newLeagueName,
-                        onValueChange = { onEvent(LeagueUiEvent.OnNewLeagueNameChanged(it)) },
-                        label = "Nombre de la Liga (ej: Los Pibes FC)"
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { onEvent(LeagueUiEvent.OnCreateLeagueClicked) },
-                    enabled = state.newLeagueName.trim().length >= 3,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
-                ) {
-                    Text("Crear Liga", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(LeagueUiEvent.OnOpenCreateDialog(false)) }) {
-                    Text("Cancelar", color = Color(0xFF94A3B8))
-                }
-            },
-            containerColor = Color(0xFF1E293B)
+        CreateLeagueDialog(
+            leagueName = state.newLeagueName,
+            onNameChange = { onEvent(LeagueUiEvent.OnNewLeagueNameChanged(it)) },
+            onConfirm = { onEvent(LeagueUiEvent.OnCreateLeagueClicked) },
+            onDismiss = { onEvent(LeagueUiEvent.OnOpenCreateDialog(false)) }
         )
     }
 
-    // DIÁLOGO UNIRSE A LIGA CON CÓDIGO
+    // DIÁLOGO UNIRSE CON CÓDIGO (Figma Make: .modal)
     if (state.isJoinDialogOpen) {
-        AlertDialog(
-            onDismissRequest = { onEvent(LeagueUiEvent.OnOpenJoinDialog(false)) },
-            title = { Text("🔑 Unirse con Código", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text(
-                        text = "Ingresa el código de 6 caracteres que te compartió el creador de la liga.",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    ChaProdeTextField(
-                        value = state.joinCode,
-                        onValueChange = { onEvent(LeagueUiEvent.OnJoinCodeChanged(it)) },
-                        label = "Código de Invitación (ej: ARG26X)"
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { onEvent(LeagueUiEvent.OnJoinLeagueClicked) },
-                    enabled = state.joinCode.trim().length >= 4,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
-                ) {
-                    Text("Unirme", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(LeagueUiEvent.OnOpenJoinDialog(false)) }) {
-                    Text("Cancelar", color = Color(0xFF94A3B8))
-                }
-            },
-            containerColor = Color(0xFF1E293B)
+        JoinLeagueDialog(
+            joinCode = state.joinCode,
+            onCodeChange = { onEvent(LeagueUiEvent.OnJoinCodeChanged(it)) },
+            onConfirm = { onEvent(LeagueUiEvent.OnJoinLeagueClicked) },
+            onDismiss = { onEvent(LeagueUiEvent.OnOpenJoinDialog(false)) }
         )
     }
 
     // MODAL DETALLE DE LIGA CON RANKING
     state.selectedLeagueDetail?.let { detail ->
-        AlertDialog(
-            onDismissRequest = { onEvent(LeagueUiEvent.OnCloseDetail) },
-            title = {
-                Column {
-                    Text(detail.liga.nombre, color = Color(0xFFFBBF24), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text("Posiciones de la Liga", color = Color(0xFF94A3B8), fontSize = 12.sp)
-                }
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
-                    if (detail.ranking.isEmpty()) {
-                        Text("No hay pronósticos puntuados en esta liga.", color = Color(0xFF94A3B8), fontSize = 13.sp)
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(detail.ranking) { user ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0xFF0F172A), RoundedCornerShape(10.dp))
-                                        .padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("#${user.posicion}", color = Color(0xFF94A3B8), fontWeight = FontWeight.Bold, modifier = Modifier.width(32.dp))
-                                    Text(user.username, color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                    Text("${user.puntosTotales} pts", color = Color(0xFFFBBF24), fontWeight = FontWeight.ExtraBold)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { onEvent(LeagueUiEvent.OnCloseDetail) }) {
-                    Text("Cerrar", color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = Color(0xFF1E293B)
+        LeagueDetailRankingDialog(
+            detail = detail,
+            onDismiss = { onEvent(LeagueUiEvent.OnCloseDetail) }
         )
     }
 }
 
+/**
+ * Cabecera superior con acciones
+ */
+@Composable
+fun LeaguesTopBar(
+    showBack: Boolean,
+    onNavigateBack: () -> Unit,
+    onRefresh: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (showBack) {
+            IconButton(
+                onClick = onNavigateBack,
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(ChaProdeSurface)
+                    .border(1.dp, ChaProdeBorder, RoundedCornerShape(10.dp))
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = ChaProdeText,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+
+        Text(
+            text = "Ligas y Comunidades",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = ChaProdeText,
+            modifier = Modifier.weight(1f)
+        )
+
+        IconButton(
+            onClick = onRefresh,
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(ChaProdeSurface)
+                .border(1.dp, ChaProdeBorder, RoundedCornerShape(10.dp))
+        ) {
+            Icon(
+                Icons.Default.Refresh,
+                contentDescription = "Actualizar",
+                tint = ChaProdeMuted,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Banner Héroe de Ligas Privadas (Figma Make: .league-banner)
+ */
+@Composable
+fun LeagueBanner() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                // Brillo radial cyan superior derecho
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ChaProdeSky.copy(alpha = 0.22f), Color.Transparent),
+                        center = Offset(size.width * 0.9f, size.height * 0.2f),
+                        radius = size.width * 0.45f
+                    )
+                )
+            },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ChaProdeSky.copy(alpha = 0.32f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(Color(0xFF1E3048), ChaProdeSurface)
+                    )
+                )
+                .padding(22.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Ícono de Comunidad (Figma Make: .league-banner__icon)
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(ChaProdeSky.copy(alpha = 0.12f))
+                        .border(1.dp, ChaProdeSky.copy(alpha = 0.25f), RoundedCornerShape(15.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Group,
+                        contentDescription = null,
+                        tint = ChaProdeSky,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "LIGAS PRIVADAS",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.4.sp,
+                    color = ChaProdeSky
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Compite con\ntus amigos",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    lineHeight = 28.sp,
+                    letterSpacing = (-0.5).sp,
+                    color = ChaProdeText
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Crea tu propia comunidad, suma puntos y demuestra quién sabe más de fútbol.",
+                    fontSize = 11.5.sp,
+                    color = ChaProdeMuted,
+                    lineHeight = 16.sp
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Botones de Acción Rápida (Figma Make: .league-actions)
+ */
+@Composable
+fun LeagueActionsRow(
+    onCreateClick: () -> Unit,
+    onJoinClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Crear Nueva Liga (Primary CTA Gradient)
+        Button(
+            onClick = onCreateClick,
+            modifier = Modifier
+                .weight(1.15f)
+                .height(46.dp),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ChaProdeCta)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Crear Nueva Liga",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1
+                )
+            }
+        }
+
+        // Unirse con Código (Secondary Surface)
+        Button(
+            onClick = onJoinClick,
+            modifier = Modifier
+                .weight(1f)
+                .height(46.dp),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ChaProdeSurfaceRaised),
+            border = androidx.compose.foundation.BorderStroke(1.dp, ChaProdeBorder)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Key,
+                    contentDescription = null,
+                    tint = ChaProdeGold,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Unirse con Código",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ChaProdeText,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Tarjeta de Liga Privada (Figma Make: .league-card)
+ */
 @Composable
 fun LeagueCard(
     league: LeagueItem,
@@ -336,154 +492,484 @@ fun LeagueCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ChaProdeBorder)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(ChaProdeSurface, ChaProdeSurfaceSoft)
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            // Fila Superior: Logo, Nombre, Miembros y Rol
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = league.nombre,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF0284C7).copy(alpha = 0.2f)
+                // Logotipo de Copa / Trofeo de la Liga (Figma Make: .league-card__logo)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (isCreator) ChaProdeGold.copy(alpha = 0.12f) else ChaProdeSky.copy(alpha = 0.12f)
+                        )
+                        .border(
+                            1.dp,
+                            if (isCreator) ChaProdeGold.copy(alpha = 0.25f) else ChaProdeSky.copy(alpha = 0.25f),
+                            RoundedCornerShape(14.dp)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Group, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(14.dp))
+                    Icon(
+                        Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = if (isCreator) ChaProdeGold else ChaProdeSky,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = league.nombre,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ChaProdeText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Group,
+                            contentDescription = null,
+                            tint = ChaProdeMuted,
+                            modifier = Modifier.size(13.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("${league.totalMiembros}", color = Color(0xFF38BDF8), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${league.totalMiembros} jugadores • ${league.torneoNombre}",
+                            fontSize = 11.sp,
+                            color = ChaProdeMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-            // Badge de rol (Creador vs Participante)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+                // Badge de Rol (Administrador vs Participante)
                 if (isCreator) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFF59E0B).copy(alpha = 0.2f),
-                        border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(ChaProdeGold.copy(alpha = 0.14f))
+                            .border(1.dp, ChaProdeGold.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "👑 Administrador",
-                            color = Color(0xFFFBBF24),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            text = "👑 Admin",
+                            color = ChaProdeGold,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
                 } else {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF38BDF8).copy(alpha = 0.15f),
-                        border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.3f))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(ChaProdeSky.copy(alpha = 0.12f))
+                            .border(1.dp, ChaProdeSky.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "⚽ Participante",
-                            color = Color(0xFF38BDF8),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            text = "⚽ Miembro",
+                            color = ChaProdeSky,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
-
-                Text(
-                    text = if (isCreator) "Creada por ti" else "Creador: @${league.creadorUsername}",
-                    color = Color(0xFF94A3B8),
-                    fontSize = 12.sp
-                )
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Torneo: ${league.torneoNombre}",
-                color = Color(0xFF64748B),
-                fontSize = 12.sp
-            )
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Código de Acceso
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF0F172A)
+            // Caja con Código de Invitación y Botón de Copiado Rápido
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(ChaProdeBg)
+                    .border(1.dp, ChaProdeBorder, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("CÓDIGO DE INVITACIÓN", fontSize = 10.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.SemiBold)
-                        Text(league.codigoAcceso, fontSize = 16.sp, color = Color(0xFFFBBF24), fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp)
+                        Text(
+                            text = "CÓDIGO DE INVITACIÓN",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp,
+                            color = ChaProdeMuted
+                        )
+                        Text(
+                            text = league.codigoAcceso,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp,
+                            color = ChaProdeGold
+                        )
                     }
 
-                    IconButton(onClick = onCopyCode) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Copiar Código", tint = Color(0xFF38BDF8), modifier = Modifier.size(20.dp))
+                    IconButton(
+                        onClick = onCopyCode,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(ChaProdeSurface)
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = "Copiar Código",
+                            tint = ChaProdeSky,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Botón para Ver la Tabla de Posiciones
             Button(
                 onClick = onViewLeaderboard,
-                modifier = Modifier.fillMaxWidth().height(42.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155))
+                colors = ButtonDefaults.buttonColors(containerColor = ChaProdeSurfaceRaised),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ChaProdeBorder)
             ) {
-                Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Ver Tabla de Posiciones", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = ChaProdeGold,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Ver Posiciones de la Liga",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ChaProdeText
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = ChaProdeSky,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }
 }
 
-@Preview(name = "Ligas Privadas", showBackground = true, backgroundColor = 0xFF0F172A)
+/**
+ * Diálogo Estilizado para Crear Liga (Figma Make: .modal)
+ */
 @Composable
-fun LeaguesScreenPreview() {
+fun CreateLeagueDialog(
+    leagueName: String,
+    onNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ChaProdeSky.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = ChaProdeSky,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Crear nueva liga",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ChaProdeText
+                    )
+                }
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Ponle un nombre memorable a tu comunidad e invita a tus amigos a competir.",
+                    color = ChaProdeMuted,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                ChaProdeTextField(
+                    value = leagueName,
+                    onValueChange = onNameChange,
+                    label = "Nombre de la Liga (ej: Los Pibes FC)"
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = leagueName.trim().length >= 3,
+                colors = ButtonDefaults.buttonColors(containerColor = ChaProdeCta),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Crear Liga", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = ChaProdeMuted, fontSize = 13.sp)
+            }
+        },
+        containerColor = ChaProdeSurface,
+        shape = RoundedCornerShape(22.dp)
+    )
+}
+
+/**
+ * Diálogo Estilizado para Unirse a Liga con Código (Figma Make: .modal)
+ */
+@Composable
+fun JoinLeagueDialog(
+    joinCode: String,
+    onCodeChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ChaProdeGold.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Key,
+                        contentDescription = null,
+                        tint = ChaProdeGold,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Unirse con código",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ChaProdeText
+                )
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Ingresa el código de 6 caracteres que te compartió el administrador de la liga.",
+                    color = ChaProdeMuted,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                ChaProdeTextField(
+                    value = joinCode,
+                    onValueChange = onCodeChange,
+                    label = "Código de Invitación (ej: ARG26X)"
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = joinCode.trim().length >= 4,
+                colors = ButtonDefaults.buttonColors(containerColor = ChaProdeCta),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Unirme", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = ChaProdeMuted, fontSize = 13.sp)
+            }
+        },
+        containerColor = ChaProdeSurface,
+        shape = RoundedCornerShape(22.dp)
+    )
+}
+
+/**
+ * Diálogo de Detalle y Clasificación de la Liga
+ */
+@Composable
+fun LeagueDetailRankingDialog(
+    detail: com.chaprode.mobile.model.LeagueDetailItem,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(
+                    text = detail.liga.nombre,
+                    color = ChaProdeGold,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 19.sp
+                )
+                Text(
+                    text = "Tabla de Posiciones de la Comunidad",
+                    color = ChaProdeMuted,
+                    fontSize = 12.sp
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 380.dp)
+            ) {
+                if (detail.ranking.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Aún no hay pronósticos puntuados en esta liga.",
+                            color = ChaProdeMuted,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(detail.ranking) { user ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (user.isCurrentUser) ChaProdeSurfaceRaised else ChaProdeBg)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (user.isCurrentUser) ChaProdeSky else ChaProdeBorder,
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "#${user.posicion}",
+                                    color = if (user.posicion == 1) ChaProdeGold else ChaProdeMuted,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.width(32.dp)
+                                )
+                                Text(
+                                    text = user.username,
+                                    color = ChaProdeText,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${user.puntosTotales} pts",
+                                    color = if (user.posicion == 1) ChaProdeGold else ChaProdeSilver,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "Cerrar",
+                    color = ChaProdeSky,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
+        },
+        containerColor = ChaProdeSurface,
+        shape = RoundedCornerShape(22.dp)
+    )
+}
+
+@Preview(name = "Ligas Privadas Moderno", showBackground = true, backgroundColor = 0xFF0F172A)
+@Composable
+fun LeaguesScreenModernPreview() {
     val sampleLeagues = listOf(
         LeagueItem(
             id = "1",
-            nombre = "Los Pibes del Fútbol",
+            nombre = "Los Pibes de la Oficina",
             codigoAcceso = "ARG26X",
             creadorId = "1",
             creadorUsername = "seba",
             torneoId = "1",
-            torneoNombre = "Copa Mundial FIFA 2026",
-            totalMiembros = 6,
+            torneoNombre = "Champions League",
+            totalMiembros = 12,
             createdAt = "2026-06-01"
         ),
         LeagueItem(
             id = "2",
-            nombre = "Amigos de la Oficina",
-            codigoAcceso = "PRODE8",
+            nombre = "Familia Futbolera",
+            codigoAcceso = "FAM2026",
             creadorId = "2",
             creadorUsername = "gonza",
             torneoId = "1",
             torneoNombre = "Copa Mundial FIFA 2026",
-            totalMiembros = 12,
+            totalMiembros = 8,
             createdAt = "2026-06-05"
         )
     )
@@ -491,6 +977,7 @@ fun LeaguesScreenPreview() {
     LeaguesContent(
         state = LeagueUiState(leagues = sampleLeagues),
         onEvent = {},
+        showBack = false,
         onNavigateBack = {}
     )
 }
