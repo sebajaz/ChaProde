@@ -2,6 +2,7 @@ package com.chaprode.mobile.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,15 +10,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,132 +36,393 @@ import com.chaprode.mobile.model.RankingUserItem
 import com.chaprode.mobile.ui.ranking.RankingUiEvent
 import com.chaprode.mobile.ui.ranking.RankingUiState
 import com.chaprode.mobile.ui.ranking.RankingViewModel
+import com.chaprode.mobile.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val avatarColors = listOf(
+    Color(0xFFC2410C), // Orange
+    Color(0xFF2563EB), // Blue
+    Color(0xFF059669), // Green
+    Color(0xFFDB2777), // Pink
+    Color(0xFF7C3AED), // Violet
+    Color(0xFF0284C7)  // Sky
+)
+
+private fun getAvatarColor(name: String): Color {
+    val index = kotlin.math.abs(name.hashCode()) % avatarColors.size
+    return avatarColors[index]
+}
+
+data class TournamentOption(
+    val id: String,
+    val label: String
+)
+
+private val tournamentOptions = listOf(
+    TournamentOption("todos", "Global · Todos los Torneos"),
+    TournamentOption("champions", "UEFA Champions League"),
+    TournamentOption("mundial", "Copa Mundial FIFA 2026"),
+    TournamentOption("premier", "Premier League"),
+    TournamentOption("activo", "Torneo Activo")
+)
+
 @Composable
 fun RankingScreen(
     viewModel: RankingViewModel,
-    torneoId: String = "activo",
-    torneoNombre: String = "Copa Mundial FIFA 2026",
-    onNavigateBack: () -> Unit
+    torneoId: String = "todos",
+    torneoNombre: String = "Ranking Global",
+    showBack: Boolean = false,
+    onNavigateBack: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
+    var selectedTournamentId by remember { mutableStateOf(torneoId) }
 
-    LaunchedEffect(torneoId) {
-        viewModel.onEvent(RankingUiEvent.LoadRanking(torneoId))
+    LaunchedEffect(selectedTournamentId) {
+        viewModel.onEvent(RankingUiEvent.LoadRanking(selectedTournamentId))
     }
 
     RankingContent(
         torneoNombre = torneoNombre,
+        selectedTournamentId = selectedTournamentId,
+        onTournamentChange = { newId ->
+            selectedTournamentId = newId
+        },
         state = state,
+        showBack = showBack,
+        onRefresh = {
+            viewModel.onEvent(RankingUiEvent.LoadRanking(selectedTournamentId))
+        },
         onNavigateBack = onNavigateBack
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RankingContent(
-    torneoNombre: String,
+    torneoNombre: String = "Ranking Global",
+    selectedTournamentId: String = "todos",
+    onTournamentChange: (String) -> Unit = {},
     state: RankingUiState,
-    onNavigateBack: () -> Unit
+    showBack: Boolean = false,
+    onRefresh: () -> Unit = {},
+    onNavigateBack: () -> Unit = {}
 ) {
+    val currentUser = remember(state.ranking) {
+        state.ranking.firstOrNull { it.isCurrentUser }
+    }
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "🏆 Tabla de Posiciones",
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFBBF24),
-                            fontSize = 18.sp
-                        )
-                        Text(
-                            text = torneoNombre,
-                            color = Color(0xFF94A3B8),
-                            fontSize = 12.sp
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))
-            )
-        },
-        containerColor = Color(0xFF0F172A)
+        containerColor = ChaProdeBg
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (state.isLoading && state.ranking.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF38BDF8))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            ) {
+                // Header (Figma Make: .ranking-header)
+                RankingHeader(
+                    showBack = showBack,
+                    onNavigateBack = onNavigateBack,
+                    onRefresh = onRefresh
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Selector de Torneo (Figma Make: .ranking-select)
+                TournamentSelectorDropdown(
+                    selectedTournamentId = selectedTournamentId,
+                    fallbackLabel = torneoNombre,
+                    onTournamentChange = onTournamentChange
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Estado de Carga / Vacío / Lista
+                if (state.isLoading && state.ranking.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = ChaProdeSky, strokeWidth = 3.dp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Cargando clasificación...",
+                                color = ChaProdeMuted,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                } else if (state.ranking.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(containerColor = ChaProdeSurface),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ChaProdeBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(28.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .background(ChaProdeGold.copy(alpha = 0.1f), shape = CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.EmojiEvents,
+                                        contentDescription = null,
+                                        tint = ChaProdeGold,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Sin Puntos Aún",
+                                    fontWeight = FontWeight.Bold,
+                                    color = ChaProdeText,
+                                    fontSize = 17.sp
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Aún no hay puntos registrados en este torneo. Los puntajes se actualizarán al finalizar los partidos jugados.",
+                                    color = ChaProdeMuted,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(bottom = if (currentUser != null) 92.dp else 24.dp)
+                    ) {
+                        // PODIO DE LOS 3 PRIMEROS (Figma Make: .podium)
+                        item {
+                            PodiumSection(
+                                top1 = state.top1,
+                                top2 = state.top2,
+                                top3 = state.top3
+                            )
+                        }
+
+                        // CABECERA DE TABLA DE POSICIONES (Figma Make: .leaderboard-title)
+                        item {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            LeaderboardHeader()
+                        }
+
+                        // JUGADORES DEL PUESTO 4 EN ADELANTE (Figma Make: .leader-row)
+                        items(state.restOfRanking, key = { it.usuarioId }) { item ->
+                            LeaderboardRow(item = item)
+                        }
+                    }
                 }
-            } else if (state.ranking.isEmpty()) {
+            }
+
+            // BARRA FLOTANTE / STICKY: "MI POSICIÓN" (Figma Make: .my-ranking)
+            if (currentUser != null) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.EmojiEvents,
-                            contentDescription = null,
-                            tint = Color(0xFF64748B),
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Aún no hay puntos registrados en este torneo.",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 16.sp,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // SECCIÓN DE PODIO (Top 3)
-                    item {
-                        PodiumSection(
-                            top1 = state.top1,
-                            top2 = state.top2,
-                            top3 = state.top3
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Clasificación General",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-
-                    // RESTO DE PARTICIPANTES (Puestos 4 en adelante)
-                    items(state.restOfRanking, key = { it.usuarioId }) { item ->
-                        LeaderboardRow(item = item)
-                    }
+                    MyRankingStickyBar(currentUser = currentUser)
                 }
             }
         }
     }
 }
 
+/**
+ * Cabecera de la Pantalla de Ranking (Figma Make: .ranking-header)
+ */
+@Composable
+fun RankingHeader(
+    showBack: Boolean = false,
+    onNavigateBack: () -> Unit,
+    onRefresh: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (showBack) {
+            IconButton(
+                onClick = onNavigateBack,
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(ChaProdeSurface)
+                    .border(1.dp, ChaProdeBorder, RoundedCornerShape(10.dp))
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = ChaProdeText,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+
+        // Ícono de Trofeo dentro de Caja de Acento (Figma Make: .ranking-header__icon)
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(ChaProdeGold.copy(alpha = 0.12f))
+                .border(1.dp, ChaProdeGold.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.EmojiEvents,
+                contentDescription = null,
+                tint = ChaProdeGold,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "CLASIFICACIÓN",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.5.sp,
+                color = ChaProdeGold
+            )
+            Text(
+                text = "Tabla de Posiciones",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = ChaProdeText,
+                letterSpacing = (-0.5).sp
+            )
+        }
+
+        IconButton(
+            onClick = onRefresh,
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(ChaProdeSurface)
+                .border(1.dp, ChaProdeBorder, RoundedCornerShape(10.dp))
+        ) {
+            Icon(
+                Icons.Default.Refresh,
+                contentDescription = "Actualizar",
+                tint = ChaProdeMuted,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Selector desplegable de torneo (Figma Make: .ranking-select)
+ */
+@Composable
+fun TournamentSelectorDropdown(
+    selectedTournamentId: String,
+    fallbackLabel: String = "Torneo Seleccionado",
+    onTournamentChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentLabel = tournamentOptions.firstOrNull { it.id == selectedTournamentId }?.label
+        ?: fallbackLabel
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(ChaProdeSurface)
+                .border(1.dp, ChaProdeBorder, RoundedCornerShape(14.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.SportsSoccer,
+                contentDescription = null,
+                tint = ChaProdeSky,
+                modifier = Modifier.size(18.dp)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Text(
+                text = currentLabel,
+                color = ChaProdeText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Icon(
+                Icons.Default.ArrowDropDown,
+                contentDescription = "Seleccionar torneo",
+                tint = ChaProdeMuted,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .background(ChaProdeSurface)
+                .border(1.dp, ChaProdeBorder, RoundedCornerShape(8.dp))
+        ) {
+            tournamentOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = option.label,
+                            color = if (option.id == selectedTournamentId) ChaProdeSky else ChaProdeText,
+                            fontWeight = if (option.id == selectedTournamentId) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 13.sp
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onTournamentChange(option.id)
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Sección de Podio de Campeones con los 3 primeros puestos (Figma Make: .podium)
+ */
 @Composable
 fun PodiumSection(
     top1: RankingUserItem?,
@@ -158,202 +430,323 @@ fun PodiumSection(
     top3: RankingUserItem?
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                // Brillo radial superior en oro (Figma Make: radial-gradient(circle at 50% 15%, rgba(251,191,36,.13), transparent 45%))
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ChaProdeGold.copy(alpha = 0.16f), Color.Transparent),
+                        center = Offset(size.width / 2f, 35f),
+                        radius = size.width * 0.55f
+                    )
+                )
+            },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = ChaProdeSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ChaProdeBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(top = 18.dp, start = 8.dp, end = 8.dp, bottom = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Podio de Campeones",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF38BDF8),
-                modifier = Modifier.padding(bottom = 20.dp)
-            )
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Bottom
             ) {
-                // 2do Puesto (Plata - Izquierda)
+                // 2DO PUESTO (Plata - Izquierda)
                 PodiumColumn(
+                    modifier = Modifier.weight(0.30f),
                     item = top2,
                     placeNumber = 2,
-                    medal = "🥈",
-                    color = Color(0xFFCBD5E1),
-                    podiumHeight = 90.dp
+                    placeLabel = "PLATA",
+                    standHeight = 78.dp,
+                    avatarSize = 53.dp,
+                    accentColor = ChaProdeSilver,
+                    isFirst = false
                 )
 
-                // 1er Puesto (Oro - Centro / Más alto)
+                // 1ER PUESTO (Oro - Centro / Destacado con Corona)
                 PodiumColumn(
+                    modifier = Modifier.weight(0.38f),
                     item = top1,
                     placeNumber = 1,
-                    medal = "🥇",
-                    color = Color(0xFFFBBF24),
-                    podiumHeight = 120.dp
+                    placeLabel = "CAMPEÓN",
+                    standHeight = 105.dp,
+                    avatarSize = 62.dp,
+                    accentColor = ChaProdeGold,
+                    isFirst = true
                 )
 
-                // 3er Puesto (Bronce - Derecha)
+                // 3ER PUESTO (Bronce - Derecha)
                 PodiumColumn(
+                    modifier = Modifier.weight(0.30f),
                     item = top3,
                     placeNumber = 3,
-                    medal = "🥉",
-                    color = Color(0xFFF97316),
-                    podiumHeight = 70.dp
+                    placeLabel = "BRONCE",
+                    standHeight = 64.dp,
+                    avatarSize = 53.dp,
+                    accentColor = ChaProdeBronze,
+                    isFirst = false
                 )
             }
         }
     }
 }
 
+/**
+ * Columna individual de cada puesto del podio
+ */
 @Composable
 fun PodiumColumn(
+    modifier: Modifier = Modifier,
     item: RankingUserItem?,
     placeNumber: Int,
-    medal: String,
-    color: Color,
-    podiumHeight: androidx.compose.ui.unit.Dp
+    placeLabel: String,
+    standHeight: androidx.compose.ui.unit.Dp,
+    avatarSize: androidx.compose.ui.unit.Dp,
+    accentColor: Color,
+    isFirst: Boolean
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(90.dp)
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Avatar y Medalla
-        Box(contentAlignment = Alignment.TopEnd) {
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .background(color.copy(alpha = 0.2f), shape = CircleShape)
-                    .border(2.dp, color, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = item?.username?.firstOrNull()?.uppercase() ?: "-",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-            Text(text = medal, fontSize = 18.sp)
+        // Corona para el Campeón (Figma Make: .crown)
+        if (isFirst) {
+            Text(
+                text = "♛",
+                fontSize = 22.sp,
+                color = ChaProdeGold,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.height(18.dp))
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // Avatar Circular con Borde Metálico
+        Box(
+            modifier = Modifier
+                .size(avatarSize)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(Color(0xFF475569), ChaProdeSurface)
+                    )
+                )
+                .border(
+                    width = if (isFirst) 3.dp else 2.5.dp,
+                    color = accentColor,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = item?.username?.take(2)?.uppercase() ?: "-",
+                fontSize = if (isFirst) 16.sp else 13.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White
+            )
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Nombre de Usuario
         Text(
             text = item?.username ?: "Sin definir",
-            fontSize = 13.sp,
+            fontSize = if (isFirst) 12.sp else 11.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = ChaProdeText,
             maxLines = 1,
-            textAlign = TextAlign.Center
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
         )
 
-        // Puntos
+        // Puntaje
         Text(
             text = "${item?.puntosTotales ?: 0} pts",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = color
+            fontSize = if (isFirst) 11.sp else 10.sp,
+            fontWeight = if (isFirst) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (isFirst) ChaProdeGold else ChaProdeMuted,
+            modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Bloque del Podio
-        Surface(
+        // Bloque del Podio con Gradiente Vertical y Borde Superior
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(podiumHeight),
-            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-            color = color.copy(alpha = 0.15f)
+                .height(standHeight)
+                .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            accentColor.copy(alpha = if (isFirst) 0.24f else 0.15f),
+                            accentColor.copy(alpha = 0.03f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.dp,
+                    color = accentColor.copy(alpha = if (isFirst) 0.45f else 0.32f),
+                    shape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
+                )
+                .padding(top = 8.dp),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "#$placeNumber",
-                    fontSize = 22.sp,
+                    text = "$placeNumber",
+                    fontSize = if (isFirst) 28.sp else 23.sp,
                     fontWeight = FontWeight.Black,
-                    color = color
+                    fontStyle = FontStyle.Italic,
+                    color = accentColor
+                )
+                Text(
+                    text = placeLabel,
+                    fontSize = if (isFirst) 7.5.sp else 6.5.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
+                    color = accentColor
                 )
             }
         }
     }
 }
 
+/**
+ * Encabezado de Columnas de la Tabla (Figma Make: .leaderboard-title)
+ */
+@Composable
+fun LeaderboardHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "POS.",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.8.sp,
+            color = ChaProdeSubtle,
+            modifier = Modifier.width(32.dp),
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Text(
+            text = "JUGADOR",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.8.sp,
+            color = ChaProdeSubtle,
+            modifier = Modifier.weight(1f)
+        )
+
+        Text(
+            text = "EXACTOS",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.8.sp,
+            color = ChaProdeSubtle,
+            modifier = Modifier.width(55.dp),
+            textAlign = TextAlign.End
+        )
+
+        Text(
+            text = "PUNTOS",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.8.sp,
+            color = ChaProdeSubtle,
+            modifier = Modifier.width(55.dp),
+            textAlign = TextAlign.End
+        )
+    }
+}
+
+/**
+ * Fila de Jugador en la Tabla de Posiciones (Puestos 4+) (Figma Make: .leader-row)
+ */
 @Composable
 fun LeaderboardRow(item: RankingUserItem) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                if (item.isCurrentUser) {
-                    Modifier.border(1.5.dp, Color(0xFF38BDF8), RoundedCornerShape(16.dp))
-                } else Modifier
-            ),
-        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (item.isCurrentUser) Color(0xFF1E293B) else Color(0xFF1E293B).copy(alpha = 0.7f)
+            containerColor = if (item.isCurrentUser) ChaProdeSurfaceRaised else ChaProdeSurface
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (item.isCurrentUser) 1.5.dp else 1.dp,
+            color = if (item.isCurrentUser) ChaProdeSky else ChaProdeBorder
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Posición
             Text(
-                text = "#${item.posicion}",
-                fontSize = 16.sp,
+                text = "${item.posicion}",
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF94A3B8),
-                modifier = Modifier.width(36.dp)
+                color = ChaProdeMuted,
+                modifier = Modifier.width(32.dp),
+                textAlign = TextAlign.Center
             )
 
-            // Avatar pequeño
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Avatar Circular con Iniciales
             Box(
                 modifier = Modifier
-                    .size(38.dp)
-                    .background(Color(0xFF334155), shape = CircleShape),
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(getAvatarColor(item.username)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = item.username.firstOrNull()?.uppercase() ?: "U",
-                    fontSize = 16.sp,
+                    text = item.username.take(2).uppercase(),
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-            // Nombre y Plenos
+            // Nombre y Plenos / Aciertos
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = item.username,
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = ChaProdeText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (item.isCurrentUser) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF38BDF8).copy(alpha = 0.2f)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(ChaProdeSky.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "Tú",
-                                color = Color(0xFF38BDF8),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                text = "TÚ",
+                                color = ChaProdeSky,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
@@ -361,39 +754,142 @@ fun LeaderboardRow(item: RankingUserItem) {
 
                 Text(
                     text = "🎯 ${item.plenosExactos} plenos  •  ⭐ ${item.aciertosTendencia} aciertos",
-                    fontSize = 11.sp,
-                    color = Color(0xFF94A3B8)
+                    fontSize = 10.sp,
+                    color = ChaProdeMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+
+            // Cantidad de Plenos Exactos
+            Text(
+                text = "${item.plenosExactos}",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ChaProdeMuted,
+                modifier = Modifier.width(55.dp),
+                textAlign = TextAlign.End
+            )
 
             // Puntos Totales
             Text(
                 text = "${item.puntosTotales} pts",
-                fontSize = 16.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFFFBBF24)
+                color = if (item.isCurrentUser) ChaProdeGold else ChaProdeSilver,
+                modifier = Modifier.width(55.dp),
+                textAlign = TextAlign.End
             )
         }
     }
 }
 
-@Preview(name = "Ranking con Podio", showBackground = true, backgroundColor = 0xFF0F172A)
+/**
+ * Barra Flotante Inferior: "Mi Posición" (Figma Make: .my-ranking)
+ */
 @Composable
-fun RankingScreenPreview() {
+fun MyRankingStickyBar(currentUser: RankingUserItem) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(16.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = ChaProdeSurface.copy(alpha = 0.98f)),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, ChaProdeSky.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Insignia de Posición
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(ChaProdeSky.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "#${currentUser.posicion}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ChaProdeSky
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Nombre y Rol / Tu posición
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Tu posición",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = ChaProdeMuted
+                )
+                Text(
+                    text = currentUser.username,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ChaProdeText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Puntaje del Usuario
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Tu puntaje",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = ChaProdeMuted
+                )
+                Text(
+                    text = "${currentUser.puntosTotales} pts",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    color = ChaProdeGold
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = ChaProdeSky,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Preview(name = "Ranking Screen Moderno", showBackground = true, backgroundColor = 0xFF0F172A)
+@Composable
+fun RankingScreenModernPreview() {
     val sampleRanking = listOf(
-        RankingUserItem(1, "1", "seba", 9, 3, 0, 3, isCurrentUser = true),
-        RankingUserItem(2, "2", "gonza", 7, 2, 1, 3),
-        RankingUserItem(3, "3", "martin", 5, 1, 2, 3),
-        RankingUserItem(4, "4", "lucas", 4, 1, 1, 3),
-        RankingUserItem(5, "5", "mateo", 2, 0, 2, 3)
+        RankingUserItem(1, "1", "Leo M.", 137, 8, 3, 11),
+        RankingUserItem(2, "2", "Sofi", 124, 7, 2, 11),
+        RankingUserItem(3, "3", "Juli", 121, 6, 3, 11),
+        RankingUserItem(4, "4", "Marcos R.", 118, 5, 4, 11),
+        RankingUserItem(5, "5", "Mateo G.", 112, 4, 5, 11),
+        RankingUserItem(6, "6", "Lucas P.", 108, 4, 4, 11),
+        RankingUserItem(7, "7", "Nico T.", 105, 3, 5, 11),
+        RankingUserItem(8, "8", "Leo_El10", 98, 3, 3, 11, isCurrentUser = true)
     )
 
     RankingContent(
-        torneoNombre = "Copa Mundial FIFA 2026",
+        torneoNombre = "Ranking Global",
+        selectedTournamentId = "todos",
+        onTournamentChange = {},
         state = RankingUiState(
             isLoading = false,
             ranking = sampleRanking
         ),
+        onRefresh = {},
         onNavigateBack = {}
     )
 }
