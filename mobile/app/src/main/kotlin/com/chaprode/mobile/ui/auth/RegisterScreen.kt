@@ -1,20 +1,26 @@
 package com.chaprode.mobile.ui.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -26,10 +32,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chaprode.mobile.data.repository.AuthRepository
 import com.chaprode.mobile.model.Resource
+import com.chaprode.mobile.ui.components.ButtonVariant
 import com.chaprode.mobile.ui.components.ChaProdeButton
+import com.chaprode.mobile.ui.components.ChaProdeLogo
 import com.chaprode.mobile.ui.components.ChaProdeTextField
+import com.chaprode.mobile.ui.theme.*
 import kotlinx.coroutines.launch
 
+/**
+ * Pantalla Stateful de Registro: gestiona llamadas a AuthRepository y navegación.
+ */
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
@@ -77,6 +89,9 @@ fun RegisterScreen(
     )
 }
 
+/**
+ * Pantalla Stateless de Registro: estilizada con el lenguaje visual de Figma Make.
+ */
 @Composable
 fun RegisterContent(
     username: String,
@@ -93,39 +108,69 @@ fun RegisterContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0F172A))
-            .padding(24.dp),
+            .background(ChaProdeBg)
+            .drawBehind {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ChaProdeSky.copy(alpha = 0.20f), Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.95f, size.height * 0.05f),
+                        radius = size.width * 0.65f
+                    )
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ChaProdeGold.copy(alpha = 0.16f), Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.05f, size.height * 0.95f),
+                        radius = size.width * 0.70f
+                    )
+                )
+            }
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+                .widthIn(max = 440.dp)
+                .verticalScroll(rememberScrollState())
+                .border(1.dp, ChaProdeBorder, RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            colors = CardDefaults.cardColors(containerColor = ChaProdeSurface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(28.dp),
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Crear Cuenta",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                // Eyebrow / Kicker
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(bottom = 18.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(ChaProdeSuccess, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "ÚNETE A LA COMPETENCIA",
+                        color = ChaProdeSky,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.2.sp
+                    )
+                }
 
-                Text(
-                    text = "Unite a ChaProde y pronosticá el torneo",
-                    fontSize = 14.sp,
-                    color = Color(0xFF94A3B8),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
-                )
+                // Logotipo oficial
+                ChaProdeLogo()
 
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Input Usuario
                 ChaProdeTextField(
                     value = username,
                     onValueChange = onUsernameChange,
@@ -136,6 +181,7 @@ fun RegisterContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Input Email
                 ChaProdeTextField(
                     value = email,
                     onValueChange = onEmailChange,
@@ -149,6 +195,7 @@ fun RegisterContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Input Contraseña
                 ChaProdeTextField(
                     value = password,
                     onValueChange = onPasswordChange,
@@ -168,7 +215,7 @@ fun RegisterContent(
                             .fillMaxWidth()
                             .padding(top = 16.dp),
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFEF4444).copy(alpha = 0.15f)
+                        color = ChaProdeDanger.copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = errorMessage,
@@ -181,31 +228,61 @@ fun RegisterContent(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(26.dp))
 
+                // Botón Crear cuenta
                 ChaProdeButton(
-                    text = "Registrarme",
+                    text = "Crear mi cuenta",
+                    variant = ButtonVariant.Primary,
+                    trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
                     isLoading = isLoading,
                     enabled = username.isNotBlank() && email.isNotBlank() && password.length >= 6,
                     onClick = onRegisterClick
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
+                // Enlace a Login
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "¿Ya tenés una cuenta? ",
-                        color = Color(0xFF94A3B8),
+                        text = "¿Ya tienes una cuenta? ",
+                        color = ChaProdeMuted,
                         fontSize = 13.sp
                     )
                     TextButton(onClick = onNavigateToLogin, contentPadding = PaddingValues(0.dp)) {
                         Text(
-                            text = "Iniciar Sesión",
-                            color = Color(0xFF38BDF8),
-                            fontWeight = FontWeight.Bold,
+                            text = "Inicia sesión",
+                            color = ChaProdeSky,
+                            fontWeight = FontWeight.ExtraBold,
                             fontSize = 13.sp
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Pie de tarjeta con sello de seguridad
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(width = 0.5.dp, color = ChaProdeBorder.copy(alpha = 0.6f), shape = RoundedCornerShape(8.dp))
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = ChaProdeSubtle,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Datos protegidos y pronósticos seguros",
+                        color = ChaProdeSubtle,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
