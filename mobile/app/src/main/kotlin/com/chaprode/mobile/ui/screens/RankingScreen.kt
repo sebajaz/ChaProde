@@ -38,6 +38,12 @@ import com.chaprode.mobile.ui.ranking.RankingUiState
 import com.chaprode.mobile.ui.ranking.RankingViewModel
 import com.chaprode.mobile.ui.theme.*
 
+/**
+ * =========================================================================================
+ * Paleta de Colores para Avatares de la Tabla de Posiciones (Figma Make: .avatar--*)
+ * =========================================================================================
+ * Lista de colores vivos para distinguir visualmente a los usuarios de la tabla.
+ */
 private val avatarColors = listOf(
     Color(0xFFC2410C), // Orange
     Color(0xFF2563EB), // Blue
@@ -47,16 +53,26 @@ private val avatarColors = listOf(
     Color(0xFF0284C7)  // Sky
 )
 
+/**
+ * Función determinista que asigna un color fijo de avatar según el nombre de usuario (hash).
+ * Garantiza que el mismo usuario siempre tenga el mismo color en toda la aplicación.
+ */
 private fun getAvatarColor(name: String): Color {
     val index = kotlin.math.abs(name.hashCode()) % avatarColors.size
     return avatarColors[index]
 }
 
+/**
+ * Modelo de opción para el selector desplegable de torneos en la pantalla de ranking.
+ */
 data class TournamentOption(
     val id: String,
     val label: String
 )
 
+/**
+ * Torneos disponibles para consultar la tabla de posiciones general o por torneo.
+ */
 private val tournamentOptions = listOf(
     TournamentOption("todos", "Global · Todos los Torneos"),
     TournamentOption("champions", "UEFA Champions League"),
@@ -65,6 +81,26 @@ private val tournamentOptions = listOf(
     TournamentOption("activo", "Torneo Activo")
 )
 
+/**
+ * =========================================================================================
+ * RankingScreen: Pantalla de Tabla de Posiciones y Podio de Campeones.
+ * =========================================================================================
+ * Propósito:
+ * Mostrar la clasificación general de los participantes del prode ordenados por puntaje total.
+ * 
+ * Componentes clave:
+ * 1. Cabecera con icono de trofeo en caja dorada ([RankingHeader]).
+ * 2. Selector de Torneo desplegable ([TournamentSelectorDropdown]).
+ * 3. Podio de los 3 primeros puestos ([PodiumSection]) con tarimas metálicas (Oro, Plata, Bronce).
+ * 4. Tabla de clasificación para puestos 4 en adelante ([LeaderboardHeader] y [LeaderboardRow]).
+ * 5. Barra flotante sticky al pie ([MyRankingStickyBar]) que destaca la posición del usuario conectado.
+ * 
+ * @param viewModel ViewModel de clasificación que consulta los puntajes consolidados en la API Ktor.
+ * @param torneoId Torneo inicialmente seleccionado ("todos").
+ * @param torneoNombre Título descriptivo para la barra superior.
+ * @param showBack Si es true, muestra una flecha para retroceder (útil si se abre desde Home).
+ * @param onNavigateBack Callback de navegación hacia atrás.
+ */
 @Composable
 fun RankingScreen(
     viewModel: RankingViewModel,
@@ -76,6 +112,7 @@ fun RankingScreen(
     val state by viewModel.uiState.collectAsState()
     var selectedTournamentId by remember { mutableStateOf(torneoId) }
 
+    // Dispara la carga de clasificación cada vez que el usuario selecciona otro torneo
     LaunchedEffect(selectedTournamentId) {
         viewModel.onEvent(RankingUiEvent.LoadRanking(selectedTournamentId))
     }
@@ -95,6 +132,9 @@ fun RankingScreen(
     )
 }
 
+/**
+ * Contenido visual de la pantalla de Ranking.
+ */
 @Composable
 fun RankingContent(
     torneoNombre: String = "Ranking Global",
@@ -105,6 +145,7 @@ fun RankingContent(
     onRefresh: () -> Unit = {},
     onNavigateBack: () -> Unit = {}
 ) {
+    // Identifica al usuario actual dentro de la lista de ranking (si ya tiene puntos)
     val currentUser = remember(state.ranking) {
         state.ranking.firstOrNull { it.isCurrentUser }
     }
@@ -122,7 +163,9 @@ fun RankingContent(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                // Header (Figma Make: .ranking-header)
+                // -------------------------------------------------------------------------
+                // 1. Cabecera (Figma Make: .ranking-header)
+                // -------------------------------------------------------------------------
                 RankingHeader(
                     showBack = showBack,
                     onNavigateBack = onNavigateBack,
@@ -131,7 +174,9 @@ fun RankingContent(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Selector de Torneo (Figma Make: .ranking-select)
+                // -------------------------------------------------------------------------
+                // 2. Selector de Torneo (Figma Make: .ranking-select)
+                // -------------------------------------------------------------------------
                 TournamentSelectorDropdown(
                     selectedTournamentId = selectedTournamentId,
                     fallbackLabel = torneoNombre,
@@ -140,8 +185,11 @@ fun RankingContent(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Estado de Carga / Vacío / Lista
+                // -------------------------------------------------------------------------
+                // 3. Estado de Carga / Vacío / Listado con Podio y Filas
+                // -------------------------------------------------------------------------
                 if (state.isLoading && state.ranking.isEmpty()) {
+                    // Carga inicial
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -159,6 +207,7 @@ fun RankingContent(
                         }
                     }
                 } else if (state.ranking.isEmpty()) {
+                    // Estado sin puntos registrados aún
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -209,6 +258,7 @@ fun RankingContent(
                         }
                     }
                 } else {
+                    // Lista con Podio + Cabecera de Tabla + Jugadores
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -216,7 +266,7 @@ fun RankingContent(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(bottom = if (currentUser != null) 92.dp else 24.dp)
                     ) {
-                        // PODIO DE LOS 3 PRIMEROS (Figma Make: .podium)
+                        // A) PODIO DE LOS 3 PRIMEROS (Figma Make: .podium)
                         item {
                             PodiumSection(
                                 top1 = state.top1,
@@ -225,13 +275,13 @@ fun RankingContent(
                             )
                         }
 
-                        // CABECERA DE TABLA DE POSICIONES (Figma Make: .leaderboard-title)
+                        // B) CABECERA DE TABLA DE POSICIONES (Figma Make: .leaderboard-title)
                         item {
                             Spacer(modifier = Modifier.height(12.dp))
                             LeaderboardHeader()
                         }
 
-                        // JUGADORES DEL PUESTO 4 EN ADELANTE (Figma Make: .leader-row)
+                        // C) JUGADORES DEL PUESTO 4 EN ADELANTE (Figma Make: .leader-row)
                         items(state.restOfRanking, key = { it.usuarioId }) { item ->
                             LeaderboardRow(item = item)
                         }
@@ -239,7 +289,9 @@ fun RankingContent(
                 }
             }
 
-            // BARRA FLOTANTE / STICKY: "MI POSICIÓN" (Figma Make: .my-ranking)
+            // -----------------------------------------------------------------------------
+            // 4. BARRA FLOTANTE / STICKY: "MI POSICIÓN" (Figma Make: .my-ranking)
+            // -----------------------------------------------------------------------------
             if (currentUser != null) {
                 Box(
                     modifier = Modifier
@@ -254,7 +306,7 @@ fun RankingContent(
 }
 
 /**
- * Cabecera de la Pantalla de Ranking (Figma Make: .ranking-header)
+ * Cabecera de la Pantalla de Ranking (Figma Make: .ranking-header).
  */
 @Composable
 fun RankingHeader(
@@ -287,7 +339,7 @@ fun RankingHeader(
             Spacer(modifier = Modifier.width(10.dp))
         }
 
-        // Ícono de Trofeo dentro de Caja de Acento (Figma Make: .ranking-header__icon)
+        // Ícono de Trofeo dentro de Caja de Acento Dorada (Figma Make: .ranking-header__icon)
         Box(
             modifier = Modifier
                 .size(46.dp)
@@ -323,6 +375,7 @@ fun RankingHeader(
             )
         }
 
+        // Botón de recarga manual
         IconButton(
             onClick = onRefresh,
             modifier = Modifier
@@ -342,7 +395,7 @@ fun RankingHeader(
 }
 
 /**
- * Selector desplegable de torneo (Figma Make: .ranking-select)
+ * Selector desplegable de torneo (Figma Make: .ranking-select).
  */
 @Composable
 fun TournamentSelectorDropdown(
@@ -393,6 +446,7 @@ fun TournamentSelectorDropdown(
             )
         }
 
+        // Menú desplegable con las opciones de torneo
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
@@ -421,7 +475,13 @@ fun TournamentSelectorDropdown(
 }
 
 /**
- * Sección de Podio de Campeones con los 3 primeros puestos (Figma Make: .podium)
+ * =========================================================================================
+ * PodiumSection: Podio Olímpico/Deportivo de 3 Columnas (Figma Make: .podium).
+ * =========================================================================================
+ * Disposición:
+ * - Izquierda: 2do Puesto (Plata - 78dp)
+ * - Centro: 1er Puesto (Oro / Campeón - 105dp con corona ♛ y halo)
+ * - Derecha: 3er Puesto (Bronce - 64dp)
  */
 @Composable
 fun PodiumSection(
@@ -433,7 +493,7 @@ fun PodiumSection(
         modifier = Modifier
             .fillMaxWidth()
             .drawBehind {
-                // Brillo radial superior en oro (Figma Make: radial-gradient(circle at 50% 15%, rgba(251,191,36,.13), transparent 45%))
+                // Brillo radial superior en oro
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(ChaProdeGold.copy(alpha = 0.16f), Color.Transparent),
@@ -498,7 +558,7 @@ fun PodiumSection(
 }
 
 /**
- * Columna individual de cada puesto del podio
+ * Columna individual de cada puesto del podio.
  */
 @Composable
 fun PodiumColumn(
@@ -515,7 +575,7 @@ fun PodiumColumn(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Corona para el Campeón (Figma Make: .crown)
+        // Corona dorada para el Campeón
         if (isFirst) {
             Text(
                 text = "♛",
@@ -527,7 +587,7 @@ fun PodiumColumn(
             Spacer(modifier = Modifier.height(18.dp))
         }
 
-        // Avatar Circular con Borde Metálico
+        // Avatar circular con borde metálico (Oro / Plata / Bronce)
         Box(
             modifier = Modifier
                 .size(avatarSize)
@@ -566,7 +626,7 @@ fun PodiumColumn(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
         )
 
-        // Puntaje
+        // Puntaje del jugador
         Text(
             text = "${item?.puntosTotales ?: 0} pts",
             fontSize = if (isFirst) 11.sp else 10.sp,
@@ -618,7 +678,7 @@ fun PodiumColumn(
 }
 
 /**
- * Encabezado de Columnas de la Tabla (Figma Make: .leaderboard-title)
+ * Encabezado de Columnas de la Tabla (Figma Make: .leaderboard-title).
  */
 @Composable
 fun LeaderboardHeader() {
@@ -672,7 +732,7 @@ fun LeaderboardHeader() {
 }
 
 /**
- * Fila de Jugador en la Tabla de Posiciones (Puestos 4+) (Figma Make: .leader-row)
+ * Fila de Jugador en la Tabla de Posiciones (Puestos 4+) (Figma Make: .leader-row).
  */
 @Composable
 fun LeaderboardRow(item: RankingUserItem) {
@@ -693,7 +753,7 @@ fun LeaderboardRow(item: RankingUserItem) {
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Posición
+            // Posición (#4, #5, etc.)
             Text(
                 text = "${item.posicion}",
                 fontSize = 12.sp,
@@ -705,7 +765,7 @@ fun LeaderboardRow(item: RankingUserItem) {
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            // Avatar Circular con Iniciales
+            // Avatar Circular con Iniciales coloreadas
             Box(
                 modifier = Modifier
                     .size(34.dp)
@@ -734,6 +794,7 @@ fun LeaderboardRow(item: RankingUserItem) {
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    // Badge "TÚ" en celeste si es el usuario autenticado
                     if (item.isCurrentUser) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
@@ -785,7 +846,7 @@ fun LeaderboardRow(item: RankingUserItem) {
 }
 
 /**
- * Barra Flotante Inferior: "Mi Posición" (Figma Make: .my-ranking)
+ * Barra Flotante Inferior: "Mi Posición" (Figma Make: .my-ranking).
  */
 @Composable
 fun MyRankingStickyBar(currentUser: RankingUserItem) {

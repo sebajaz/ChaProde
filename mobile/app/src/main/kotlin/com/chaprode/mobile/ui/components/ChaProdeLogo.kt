@@ -17,8 +17,25 @@ import androidx.compose.ui.unit.sp
 import com.chaprode.mobile.ui.theme.*
 
 /**
- * Logotipo oficial de ChaProde inspirado en el componente Logo de Figma Make.
- * Combina un contenedor de trofeo con gradiente Oro a Celeste y tipografía de alto impacto.
+ * =========================================================================================
+ * ChaProdeLogo: Componente de Marca Oficial (Figma Make: .logo / Brand Header).
+ * =========================================================================================
+ * Propósito:
+ * Proporcionar una representación consistente y de alta fidelidad de la identidad de ChaProde
+ * en pantallas de autenticación (Login/Registro) y en barras superiores de navegación.
+ * 
+ * Modos de visualización:
+ * 1. **Modo Compacto ([compact] = true):**
+ *    - Disposición horizontal (Row): Caja de trofeo de 38dp + Título de 20sp.
+ *    - Ideal para TopBars, diálogos y espacios con límite de altura.
+ * 2. **Modo Completo / Héroe ([compact] = false):**
+ *    - Disposición vertical (Column): Caja de trofeo prominente de 58dp con gradiente de marca
+ *      ([ChaProdeBrandGradient] Oro a Celeste), título tipográfico de 32sp en peso Black
+ *      y bajada institucional ("Pronósticos Deportivos Mundiales").
+ *    - Ideal para las pantallas de bienvenida, Login y Registro.
+ * 
+ * @param modifier Modificador Compose para ubicación y márgenes.
+ * @param compact Si es true, renderiza la versión horizontal reducida; si es false, la versión hero vertical.
  */
 @Composable
 fun ChaProdeLogo(
@@ -26,6 +43,9 @@ fun ChaProdeLogo(
     compact: Boolean = false
 ) {
     if (compact) {
+        // ---------------------------------------------------------------------------------
+        // Disposición Horizontal Compacta (TopBars)
+        // ---------------------------------------------------------------------------------
         Row(
             modifier = modifier,
             verticalAlignment = Alignment.CenterVertically,
@@ -52,10 +72,14 @@ fun ChaProdeLogo(
             )
         }
     } else {
+        // ---------------------------------------------------------------------------------
+        // Disposición Vertical Hero (Login / Registro / Bienvenida)
+        // ---------------------------------------------------------------------------------
         Column(
             modifier = modifier,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Isotipo: Trofeo dentro de caja con gradiente de marca Oro a Celeste
             Box(
                 modifier = Modifier
                     .size(58.dp)
@@ -69,7 +93,10 @@ fun ChaProdeLogo(
                     modifier = Modifier.size(30.dp)
                 )
             }
+
             Spacer(modifier = Modifier.height(12.dp))
+
+            // Logotipo tipográfico en peso Black
             Text(
                 text = "ChaProde",
                 fontSize = 32.sp,
@@ -77,6 +104,8 @@ fun ChaProdeLogo(
                 letterSpacing = (-0.8).sp,
                 color = Color.White
             )
+
+            // Bajada institucional de marca
             Text(
                 text = "Pronósticos Deportivos Mundiales",
                 fontSize = 13.sp,

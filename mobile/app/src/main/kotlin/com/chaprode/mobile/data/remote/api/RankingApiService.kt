@@ -10,6 +10,11 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * Servicio de red HTTP para la tabla de posiciones y leaderboard general.
+ *
+ * @param baseUrl Dirección base del servidor Ktor backend.
+ */
 class RankingApiService(
     private val baseUrl: String = ApiConfig.BASE_URL
 ) {

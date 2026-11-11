@@ -10,12 +10,21 @@ import kotlinx.datetime.Instant
 import java.util.*
 import kotlin.time.Duration.Companion.minutes
 
+/**
+ * Servicio de lógica de negocio para Pronósticos:
+ * Implementa la regla crítica de bloqueo 5 minutos antes del inicio del cotejo
+ * calculada con la hora del reloj del servidor (UTC).
+ */
 class PredictionService(
     private val predictionRepository: PredictionRepository = PredictionRepository(),
     private val matchRepository: MatchRepository = MatchRepository(),
     private val tournamentService: TournamentService = TournamentService()
 ) {
 
+    /**
+     * Valida y persiste o actualiza un pronóstico (upsert) para un partido.
+     * Rechaza la operación si el partido ya inició o si faltan menos de 5 minutos.
+     */
     suspend fun submitPrediction(userId: String, request: SubmitPredictionRequest): PredictionDto {
         if (request.golesLocal < 0 || request.golesLocal > 99 ||
             request.golesVisitante < 0 || request.golesVisitante > 99) {

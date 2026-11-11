@@ -6,6 +6,10 @@ import com.chaprode.repositories.LeaderboardRepository
 import com.chaprode.repositories.TournamentRepository
 import java.util.*
 
+/**
+ * Servicio de cómputo y consulta de Tablas de Posiciones:
+ * Devuelve el ranking clasificado por puntos descendentes, plenos exactos y aciertos de tendencia.
+ */
 class LeaderboardService(
     private val leaderboardRepository: LeaderboardRepository = LeaderboardRepository(),
     private val tournamentRepository: TournamentRepository = TournamentRepository(),

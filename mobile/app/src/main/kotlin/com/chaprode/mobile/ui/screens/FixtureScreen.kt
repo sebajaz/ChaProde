@@ -46,6 +46,23 @@ import com.chaprode.mobile.ui.prediction.PredictionUiState
 import com.chaprode.mobile.ui.prediction.PredictionViewModel
 import com.chaprode.mobile.ui.theme.*
 
+/**
+ * =========================================================================================
+ * FixtureScreen: Pantalla de Cartelera Deportiva y Gestión de Pronósticos.
+ * =========================================================================================
+ * Propósito:
+ * Permite al usuario explorar todos los partidos programados, filtrarlos por torneo o estado,
+ * y cargar/editar sus pronósticos de goles antes de que inicie cada encuentro.
+ * 
+ * Regla de Negocio Crítica:
+ * - Los pronósticos se bloquean estrictamente 15 minutos antes de la hora oficial del partido.
+ *   Una vez cerrado o iniciado el juego, los marcadores quedan bloqueados en modo lectura.
+ * 
+ * @param viewModel ViewModel encargado de la lógica de partidos, persistencia en Room y llamadas a la API Ktor.
+ * @param torneoId Identificador del torneo inicial a consultar ("todos" por defecto).
+ * @param torneoNombre Título descriptivo del torneo para la cabecera.
+ * @param onNavigateBack Callback de navegación para volver a la pantalla anterior.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FixtureScreen(
@@ -54,8 +71,10 @@ fun FixtureScreen(
     torneoNombre: String = "Partidos Mundiales",
     onNavigateBack: () -> Unit
 ) {
+    // Observa el estado reactivo del ViewModel de pronósticos
     val state by viewModel.uiState.collectAsState()
 
+    // Carga los partidos del torneo al montar la pantalla o cuando cambia el torneoId
     LaunchedEffect(torneoId) {
         viewModel.onEvent(PredictionUiEvent.LoadMatches(torneoId))
     }
@@ -68,6 +87,17 @@ fun FixtureScreen(
     )
 }
 
+/**
+ * =========================================================================================
+ * FixtureContent: Estructura visual completa del Fixture con filtros y listado.
+ * =========================================================================================
+ * Componentes internos:
+ * 1. TopBar con título dinámico y botón de actualización manual.
+ * 2. Carrusel horizontal de torneos (Figma Make: .chip-scroller).
+ * 3. Selector de filtros por estado del partido (Todos, Pendientes, En Juego, Finalizados, Mis Pronósticos).
+ * 4. Listado perezoso (LazyColumn) con las tarjetas de partido ([MatchCardItem]).
+ * 5. Tarjeta de resumen de historial de predicciones al pie ([PredictionsHistorySummary]).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FixtureContent(
@@ -78,19 +108,24 @@ fun FixtureContent(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Estados locales para los filtros seleccionados
     var selectedTournament by remember { mutableStateOf("Todos") }
-    var selectedFilter by remember { mutableStateOf("Todos") } // Todos, Pendientes, En Juego, Finalizados, Mis Pronósticos
+    var selectedFilter by remember { mutableStateOf("Todos") }
 
-    // Lista de torneos presentes en el fixture
+    // -------------------------------------------------------------------------------------
+    // Extracción dinámica de la lista de torneos presentes en los partidos cargados
+    // -------------------------------------------------------------------------------------
     val tournamentList = remember(state.matches) {
         val unique = state.matches.mapNotNull { it.torneoNombre }.distinct()
         listOf("Todos") + unique
     }
 
-    // Filtros disponibles
+    // Opciones disponibles de filtrado rápido
     val filterOptions = listOf("Todos", "Pendientes", "En Juego", "Finalizados", "Mis Pronósticos")
 
-    // Partidos filtrados
+    // -------------------------------------------------------------------------------------
+    // Filtrado reactivo en memoria según el torneo y el estado seleccionado
+    // -------------------------------------------------------------------------------------
     val filteredMatches = remember(state.matches, selectedTournament, selectedFilter) {
         state.matches.filter { match ->
             val matchesTournament = if (selectedTournament == "Todos") true else match.torneoNombre == selectedTournament
@@ -105,12 +140,7 @@ fun FixtureContent(
         }
     }
 
-    // Métricas del usuario
-    val myPredictedMatches = remember(state.matches) { state.matches.filter { it.tienePronosticoGuardado } }
-    val totalPoints = remember(myPredictedMatches) { myPredictedMatches.sumOf { it.puntosGanados } }
-    val plenosCount = remember(myPredictedMatches) { myPredictedMatches.count { it.puntosGanados == 3 } }
-    val tendenciasCount = remember(myPredictedMatches) { myPredictedMatches.count { it.puntosGanados == 1 } }
-
+    // Manejo de mensajes de retroalimentación (Snackbar) ante eventos de guardado o errores
     LaunchedEffect(state.successMessage, state.errorMessage) {
         state.successMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -152,11 +182,12 @@ fun FixtureContent(
                     }
                 },
                 actions = {
+                    // Botón para refrescar partidos desde el backend y sincronizar con football-data.org
                     IconButton(onClick = { onEvent(PredictionUiEvent.LoadMatches("todos")) }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Actualizar",
-                            tint = Color.White
+                            tint = ChaProdeMuted
                         )
                     }
                 },
@@ -171,7 +202,9 @@ fun FixtureContent(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 1. Carrusel Horizontal de Torneos (Figma Make reference: .chip-scroller)
+            // -----------------------------------------------------------------------------
+            // 1. Carrusel Horizontal de Torneos (Figma Make: .chip-scroller)
+            // -----------------------------------------------------------------------------
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -180,110 +213,86 @@ fun FixtureContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(tournamentList) { tournament ->
-                    val isSelected = selectedTournament == tournament
+                    val isSelected = tournament == selectedTournament
                     Surface(
                         onClick = { selectedTournament = tournament },
                         shape = RoundedCornerShape(20.dp),
                         color = if (isSelected) ChaProdeSky else ChaProdeSurface,
-                        border = if (isSelected) null else BorderStroke(1.dp, ChaProdeBorder),
-                        modifier = Modifier.height(36.dp)
+                        border = BorderStroke(
+                            1.dp,
+                            if (isSelected) ChaProdeSky else ChaProdeBorder
+                        ),
+                        modifier = Modifier.height(34.dp)
                     ) {
-                        Text(
-                            text = tournament,
-                            color = if (isSelected) ChaProdeBg else ChaProdeMuted,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                        )
-                    }
-                }
-            }
-
-            // 2. Herramientas de Fixture y Filtro de Estado (Figma Make reference: .fixture-tools)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Selector deslizable o pestañas de filtro de estado
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(filterOptions) { filter ->
-                        val isFilterSelected = selectedFilter == filter
-                        Surface(
-                            onClick = { selectedFilter = filter },
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isFilterSelected) ChaProdeBorderLight else ChaProdeSurface.copy(alpha = 0.5f),
-                            border = BorderStroke(1.dp, if (isFilterSelected) ChaProdeSky else ChaProdeBorder),
-                            modifier = Modifier.height(32.dp)
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.padding(horizontal = 14.dp)
                         ) {
                             Text(
-                                text = filter,
-                                color = if (isFilterSelected) ChaProdeSky else ChaProdeMuted,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                text = tournament,
+                                color = if (isSelected) ChaProdeBg else ChaProdeSilver,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.width(8.dp))
+            // -----------------------------------------------------------------------------
+            // 2. Filtros por Estado del Partido (Todos, Pendientes, En Juego, Finalizados)
+            // -----------------------------------------------------------------------------
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(filterOptions) { filter ->
+                    val isSelected = filter == selectedFilter
+                    StatusFilterChip(
+                        label = filter,
+                        isSelected = isSelected,
+                        onClick = { selectedFilter = filter }
+                    )
+                }
+            }
 
-                // Contador de partidos encontrados
+            // -----------------------------------------------------------------------------
+            // 3. Barra Informativa: Conteo de partidos encontrados
+            // -----------------------------------------------------------------------------
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "${filteredMatches.size} partidos",
-                    color = ChaProdeMuted,
+                    text = "PARTIDOS (${filteredMatches.size})",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp,
+                    color = ChaProdeMuted
                 )
-            }
-
-            // 3. Resumen Rápido de Puntos cuando se filtra "Mis Pronósticos" o "Finalizados"
-            if (selectedFilter == "Mis Pronósticos" || selectedFilter == "Finalizados") {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    color = ChaProdeSurface,
-                    border = BorderStroke(1.dp, ChaProdeBorder)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("PUNTOS", fontSize = 10.sp, color = ChaProdeMuted, fontWeight = FontWeight.Bold)
-                            Text("$totalPoints pts", fontSize = 16.sp, color = ChaProdeGold, fontWeight = FontWeight.Black)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("PLENOS (3p)", fontSize = 10.sp, color = ChaProdeMuted, fontWeight = FontWeight.Bold)
-                            Text("$plenosCount", fontSize = 16.sp, color = ChaProdeSuccess, fontWeight = FontWeight.Black)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("TENDENCIA (1p)", fontSize = 10.sp, color = ChaProdeMuted, fontWeight = FontWeight.Bold)
-                            Text("$tendenciasCount", fontSize = 16.sp, color = ChaProdeSky, fontWeight = FontWeight.Black)
-                        }
-                    }
+                if (state.isLoading) {
+                    Text(
+                        text = "Actualizando...",
+                        fontSize = 11.sp,
+                        color = ChaProdeSky,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
-            // 4. Lista de Partidos (Figma Make reference: .match-list)
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // -----------------------------------------------------------------------------
+            // 4. Estados de Carga / Vacío / Listado de Partidos
+            // -----------------------------------------------------------------------------
             if (state.isLoading && state.matches.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = ChaProdeSky)
-                }
-            } else if (filteredMatches.isEmpty()) {
+                // Spinner centrado de carga inicial
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -291,33 +300,72 @@ fun FixtureContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = ChaProdeBorderLight,
-                            modifier = Modifier.size(56.dp)
-                        )
+                        CircularProgressIndicator(color = ChaProdeSky, strokeWidth = 3.dp)
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = "No hay partidos disponibles",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Prueba seleccionando otro torneo o filtro de estado.",
+                            text = "Cargando partidos...",
                             color = ChaProdeMuted,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 4.dp)
+                            fontSize = 14.sp
                         )
                     }
                 }
+            } else if (filteredMatches.isEmpty()) {
+                // Tarjeta de estado vacío
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = ChaProdeSurface),
+                        border = BorderStroke(1.dp, ChaProdeBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .background(ChaProdeSky.copy(alpha = 0.12f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = null,
+                                    tint = ChaProdeSky,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "No hay partidos en esta categoría",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Prueba seleccionando otro torneo o filtro de estado.",
+                                color = ChaProdeMuted,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                }
             } else {
+                // Listado de Tarjetas de Partido
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(filteredMatches, key = { it.id }) { match ->
                         MatchCardItem(
@@ -334,6 +382,12 @@ fun FixtureContent(
                             }
                         )
                     }
+
+                    // Resumen de historial al final de la lista
+                    item {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        PredictionsHistorySummary(matches = state.matches)
+                    }
                 }
             }
         }
@@ -341,8 +395,14 @@ fun FixtureContent(
 }
 
 /**
- * Tarjeta de Partido estilizada según el prototipo de Figma Make (.match-card).
- * Incluye cabecera con badge animado, 3 columnas con ScoreStepper y pie de resultado o guardado.
+ * =========================================================================================
+ * MatchCardItem: Tarjeta individual de Partido y Pronóstico (Figma Make: .match-card).
+ * =========================================================================================
+ * Estructura:
+ * 1. Cabecera (.match-card__top): Torneo, fecha/hora y badge de estado ([MatchStatusBadge]).
+ * 2. Cuerpo Central (.match-card__body): Escudo Local + Steppers [-][goles][+] + Escudo Visitante.
+ * 3. Pie (.match-card__footer): Estado del pronóstico, puntos obtenidos (+3 por pleno, +1 por tendencia)
+ *    o botón interactivo para guardar el pronóstico.
  */
 @Composable
 fun MatchCardItem(
@@ -371,7 +431,9 @@ fun MatchCardItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Cabecera de la Tarjeta: Torneo, Fecha y Badge de Estado (Figma Make: .match-card__top)
+            // -----------------------------------------------------------------------------
+            // Cabecera: Torneo, Fecha y Badge de Estado
+            // -----------------------------------------------------------------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -380,7 +442,6 @@ fun MatchCardItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Fecha o Torneo
                 Text(
                     text = "${match.torneoNombre ?: "Partido"} · ${match.fechaHora.take(16).replace("T", " ")}",
                     color = ChaProdeMuted,
@@ -391,7 +452,7 @@ fun MatchCardItem(
                     modifier = Modifier.weight(1f)
                 )
 
-                // Badge de Estado oficial
+                // Resolución del tipo de badge según la regla de negocio
                 val statusType = when {
                     isFinished -> MatchStatusType.Finished()
                     isLive -> MatchStatusType.Live()
@@ -406,7 +467,9 @@ fun MatchCardItem(
 
             HorizontalDivider(color = ChaProdeBorder, thickness = 0.5.dp)
 
-            // Cuerpo Central: Local vs Visitante con Steppers (Figma Make: .match-card__body)
+            // -----------------------------------------------------------------------------
+            // Cuerpo Central: Local vs Visitante con Steppers interactivos
+            // -----------------------------------------------------------------------------
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -456,7 +519,7 @@ fun MatchCardItem(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         if (isFinished) {
-                            // Mostrar marcadores reales oficiales
+                            // Mostrar marcadores reales oficiales si el partido ya terminó
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = ChaProdeBg,
@@ -476,7 +539,7 @@ fun MatchCardItem(
                                 }
                             }
                         } else {
-                            // Stepper Local
+                            // Stepper Local interactivo
                             ScoreStepper(
                                 value = match.editedGolesLocal,
                                 disabled = !canPredict,
@@ -490,7 +553,7 @@ fun MatchCardItem(
                                 color = ChaProdeMuted
                             )
 
-                            // Stepper Visitante
+                            // Stepper Visitante interactivo
                             ScoreStepper(
                                 value = match.editedGolesVisitante,
                                 disabled = !canPredict,
@@ -526,7 +589,9 @@ fun MatchCardItem(
 
             HorizontalDivider(color = ChaProdeBorder, thickness = 0.5.dp)
 
-            // Pie de Tarjeta: Estado del pronóstico, puntos o botón de guardar (Figma Make: .match-card__footer)
+            // -----------------------------------------------------------------------------
+            // Pie de Tarjeta: Estado del pronóstico, puntos ganados o botón de confirmación
+            // -----------------------------------------------------------------------------
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -535,6 +600,7 @@ fun MatchCardItem(
                 contentAlignment = Alignment.Center
             ) {
                 when {
+                    // Partido finalizado: Feedback de puntuación
                     isFinished -> {
                         val resultText = when (match.puntosGanados) {
                             3 -> "⭐ ¡PLENO EXACTO! (+3 PUNTOS)"
@@ -563,6 +629,7 @@ fun MatchCardItem(
                         }
                     }
 
+                    // Estado de guardado en red en curso
                     isSaving -> {
                         CircularProgressIndicator(
                             color = ChaProdeSky,
@@ -571,8 +638,8 @@ fun MatchCardItem(
                         )
                     }
 
+                    // Se modificaron los goles en pantalla: Muestra botón primario para guardar
                     match.isEdited && canPredict -> {
-                        // Botón de guardar cuando se modificaron los goles
                         ChaProdeButton(
                             text = "Guardar pronóstico",
                             variant = ButtonVariant.Primary,
@@ -584,6 +651,7 @@ fun MatchCardItem(
                         )
                     }
 
+                    // Ya tiene un pronóstico persistido y no ha sido editado
                     match.tienePronosticoGuardado -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -602,6 +670,7 @@ fun MatchCardItem(
                         }
                     }
 
+                    // Partido bloqueado por la regla de 15 minutos
                     match.cerrado -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -620,8 +689,8 @@ fun MatchCardItem(
                         }
                     }
 
+                    // Partido abierto sin pronóstico guardado aún
                     else -> {
-                        // Partido abierto sin pronóstico guardado aún
                         ChaProdeButton(
                             text = "Confirmar pronóstico",
                             variant = ButtonVariant.Secondary,
@@ -632,6 +701,149 @@ fun MatchCardItem(
                                 .height(40.dp)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Chip individual para la barra de filtros por estado del partido.
+ */
+@Composable
+fun StatusFilterChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = if (isSelected) ChaProdeSurfaceRaised else Color.Transparent,
+        border = BorderStroke(1.dp, if (isSelected) ChaProdeSky.copy(alpha = 0.5f) else ChaProdeBorder),
+        modifier = Modifier.height(30.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 12.dp)
+        ) {
+            Text(
+                text = label,
+                color = if (isSelected) ChaProdeSky else ChaProdeMuted,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
+        }
+    }
+}
+
+/**
+ * =========================================================================================
+ * PredictionsHistorySummary: Tarjeta de Resumen del Historial de Pronósticos.
+ * =========================================================================================
+ * Calcula en tiempo real a partir de la lista de partidos:
+ * - Total de partidos que tienen un pronóstico registrado.
+ * - Cantidad de plenos exactos conseguidos (+3 pts).
+ * - Aciertos de tendencia ganadora (+1 pt).
+ * - Sumatoria total de puntos acumulados.
+ */
+@Composable
+fun PredictionsHistorySummary(matches: List<MatchWithPredictionItem>) {
+    val myPredicted = matches.filter { it.tienePronosticoGuardado }
+    val finishedCount = myPredicted.count { it.estado == "FINALIZADO" }
+    val exactHits = myPredicted.count { it.puntosGanados == 3 }
+    val tendencyHits = myPredicted.count { it.puntosGanados == 1 }
+    val totalPoints = myPredicted.sumOf { it.puntosGanados }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = ChaProdeSurfaceSoft),
+        border = BorderStroke(1.dp, ChaProdeBorder)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = ChaProdeGold,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "HISTORIAL DE PRONÓSTICOS",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = ChaProdeGold.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "$totalPoints PTS GANADOS",
+                        color = ChaProdeGold,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Fila con 3 estadísticas
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Pronosticados", color = ChaProdeMuted, fontSize = 10.sp)
+                    Text(
+                        text = "${myPredicted.size}",
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Plenos Exactos", color = ChaProdeMuted, fontSize = 10.sp)
+                    Text(
+                        text = "$exactHits",
+                        color = ChaProdeSuccess,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Tendencias", color = ChaProdeMuted, fontSize = 10.sp)
+                    Text(
+                        text = "$tendencyHits",
+                        color = ChaProdeSky,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Finalizados", color = ChaProdeMuted, fontSize = 10.sp)
+                    Text(
+                        text = "$finishedCount",
+                        color = ChaProdeSilver,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black
+                    )
                 }
             }
         }

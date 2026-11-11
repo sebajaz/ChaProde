@@ -10,9 +10,15 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.chaprode.mobile.MainActivity
 
+/**
+ * Administrador de Notificaciones Locales de ChaProde:
+ * Configura canales de notificación de alta prioridad en Android 8.0+ (Oreo)
+ * y despacha recordatorios de partidos por cerrar y avisos de puntos ganados.
+ */
 class NotificationHelper(private val context: Context) {
 
     init {
+        // Inicializa canales de recordatorios y resultados en el sistema
         createNotificationChannels()
     }
 

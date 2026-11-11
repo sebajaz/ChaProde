@@ -14,6 +14,12 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * Servicio de red HTTP para autenticación y registro de usuarios.
+ * Utiliza [HttpURLConnection] con serialización JSON nativa sobre el hilo de I/O.
+ *
+ * @param baseUrl Dirección base del servidor Ktor backend.
+ */
 class AuthApiService(
     private val baseUrl: String = ApiConfig.BASE_URL
 ) {

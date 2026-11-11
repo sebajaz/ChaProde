@@ -6,6 +6,11 @@ import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+/**
+ * Endpoints REST para tablas de posiciones:
+ * - GET /api/leaderboard/global        : Tabla general histórica global.
+ * - GET /api/leaderboard/torneo/{id}   : Tabla de posiciones clasificada por torneo.
+ */
 fun Route.leaderboardRoutes(leaderboardService: LeaderboardService = LeaderboardService()) {
     route("/api") {
         get("/torneos/{id}/ranking") {

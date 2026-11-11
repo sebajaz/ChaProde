@@ -3,6 +3,11 @@ package com.chaprode.services
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 
+/**
+ * Tarea programada en segundo plano (Daemon / Scheduler):
+ * Ejecuta periódicamente cada 15 minutos en un hilo no bloqueante la sincronización
+ * automática de resultados deportivos y la liquidación de puntos.
+ */
 class MatchSchedulerService(
     private val matchSyncService: MatchSyncService,
     private val intervalMinutes: Long = 15,

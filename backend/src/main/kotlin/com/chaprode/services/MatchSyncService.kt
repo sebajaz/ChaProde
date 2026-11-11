@@ -15,6 +15,12 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.time.Duration.Companion.days
 
+/**
+ * Servicio de sincronización y liquidación de partidos:
+ * Consulta marcadores reales desde Football-Data.org (o simulador de prueba),
+ * actualiza el estado de los partidos a "FINALIZADO", ejecuta el motor [ScoringEngine]
+ * para calcular puntos ganados y liquida todos los pronósticos automáticamente.
+ */
 class MatchSyncService(
     private val matchRepository: MatchRepository = MatchRepository(),
     private val tournamentRepository: TournamentRepository = TournamentRepository(),

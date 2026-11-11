@@ -16,6 +16,9 @@ class PredictionRepository(
     private val sessionManager: SessionManager = SessionManager()
 ) {
 
+    /**
+     * Obtiene el listado de partidos del torneo con los pronósticos previos del usuario autenticado.
+     */
     fun getMatchesWithPredictions(torneoId: String): Flow<Resource<List<MatchWithPredictionItem>>> = flow {
         emit(Resource.Loading)
         val token = sessionManager.currentToken.value
@@ -30,6 +33,10 @@ class PredictionRepository(
         )
     }
 
+    /**
+     * Envía un pronóstico para un partido específico al servidor backend.
+     * Valida que exista una sesión activa antes de despachar la solicitud HTTP.
+     */
     fun submitPrediction(
         partidoId: String,
         golesLocal: Int,

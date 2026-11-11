@@ -8,11 +8,18 @@ import com.chaprode.mobile.model.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
+/**
+ * Repositorio de Ligas Privadas:
+ * Encapsula la gestión de ligas entre amigos (crear, unirse, listar y ver tablas internas).
+ */
 class LeagueRepository(
     private val apiService: LeagueApiService = LeagueApiService(),
     private val sessionManager: SessionManager = SessionManager()
 ) {
 
+    /**
+     * Obtiene todas las ligas a las que pertenece el usuario autenticado.
+     */
     fun getMyLeagues(): Flow<Resource<List<LeagueItem>>> = flow {
         emit(Resource.Loading)
         val token = sessionManager.currentToken.value

@@ -4,6 +4,7 @@ import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.kotlin.datetime.CurrentTimestamp
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
 
+/** Tabla relacional de usuarios registrados en el sistema prode. */
 object UsuariosTable : UUIDTable("usuarios") {
     val username = varchar("username", 50).uniqueIndex()
     val email = varchar("email", 100).uniqueIndex()
@@ -12,6 +13,7 @@ object UsuariosTable : UUIDTable("usuarios") {
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
 }
 
+/** Tabla de torneos y copas oficiales de fútbol (ej: Copa Mundial FIFA 2026). */
 object TorneosTable : UUIDTable("torneos") {
     val nombre = varchar("nombre", 100)
     val codigoExterno = varchar("codigo_externo", 50).nullable()
@@ -22,6 +24,7 @@ object TorneosTable : UUIDTable("torneos") {
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
 }
 
+/** Tabla de selecciones nacionales y clubes participantes. */
 object EquiposTable : UUIDTable("equipos") {
     val nombre = varchar("nombre", 100)
     val codigoExterno = varchar("codigo_externo", 50).nullable()
@@ -39,6 +42,7 @@ object TorneoEquiposTable : UUIDTable("torneo_equipos") {
     }
 }
 
+/** Tabla de partidos programados, resultados oficiales y estados de juego. */
 object PartidosTable : UUIDTable("partidos") {
     val torneoId = reference("torneo_id", TorneosTable)
     val equipoLocalId = reference("equipo_local_id", EquiposTable)
@@ -51,6 +55,7 @@ object PartidosTable : UUIDTable("partidos") {
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
 }
 
+/** Tabla de pronósticos enviados por los usuarios con regla de unicidad por partido. */
 object PronosticosTable : UUIDTable("pronosticos") {
     val usuarioId = reference("usuario_id", UsuariosTable)
     val partidoId = reference("partido_id", PartidosTable)
@@ -65,6 +70,7 @@ object PronosticosTable : UUIDTable("pronosticos") {
     }
 }
 
+/** Tabla de ligas privadas creadas por usuarios con código de invitación único. */
 object LigasPrivadasTable : UUIDTable("ligas_privadas") {
     val nombre = varchar("nombre", 100)
     val codigoAcceso = varchar("codigo_acceso", 10).uniqueIndex()
@@ -73,6 +79,7 @@ object LigasPrivadasTable : UUIDTable("ligas_privadas") {
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
 }
 
+/** Tabla intermedia que asocia usuarios con las ligas privadas a las que se unieron. */
 object MiembrosLigaTable : UUIDTable("miembros_liga") {
     val ligaId = reference("liga_id", LigasPrivadasTable)
     val usuarioId = reference("usuario_id", UsuariosTable)

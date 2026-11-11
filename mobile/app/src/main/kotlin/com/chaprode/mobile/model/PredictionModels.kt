@@ -1,5 +1,9 @@
 package com.chaprode.mobile.model
 
+/**
+ * Modelo completo que une la información de un partido con el pronóstico del usuario,
+ * el estado de cierre (15 min antes), y el buffer de edición local para la interfaz.
+ */
 data class MatchWithPredictionItem(
     val id: String,
     val localNombre: String,
@@ -23,6 +27,7 @@ data class MatchWithPredictionItem(
     val editedGolesVisitante: Int = miPronosticoVisitante ?: 0,
     val isEdited: Boolean = false
 ) {
+    /** Determina si el usuario ya registró formalmente un pronóstico en el servidor. */
     val tienePronosticoGuardado: Boolean
         get() = miPronosticoLocal != null && miPronosticoVisitante != null
 }

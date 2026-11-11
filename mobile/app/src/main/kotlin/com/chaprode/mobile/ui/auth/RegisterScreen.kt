@@ -40,7 +40,13 @@ import com.chaprode.mobile.ui.theme.*
 import kotlinx.coroutines.launch
 
 /**
- * Pantalla Stateful de Registro: gestiona llamadas a AuthRepository y navegación.
+ * Pantalla Stateful de Registro:
+ * Administra el formulario de alta de nuevo usuario, la validación de entrada
+ * y la llamada asíncrona a `AuthRepository.register`.
+ *
+ * @param onNavigateToLogin Callback para regresar a la pantalla de login.
+ * @param onRegisterSuccess Callback ejecutado cuando el registro y sesión automática son confirmados.
+ * @param repository Repositorio de autenticación para interactuar con la API REST de ChaProde.
  */
 @Composable
 fun RegisterScreen(
@@ -48,12 +54,15 @@ fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     repository: AuthRepository = AuthRepository()
 ) {
-    var username by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
+    // --------------------------------------------------------------------------------------------
+    // ESTADO LOCAL DEL FORMULARIO DE REGISTRO
+    // --------------------------------------------------------------------------------------------
+    var username by remember { mutableStateOf("") }                  // Nombre de usuario elegido
+    var email by remember { mutableStateOf("") }                        // Correo electrónico del usuario
+    var password by remember { mutableStateOf("") }                     // Contraseña (mínimo 6 caracteres)
+    var isLoading by remember { mutableStateOf(false) }                 // Indicador visual de petición en progreso
+    var errorMessage by remember { mutableStateOf<String?>(null) }      // Mensaje de error retornado por la API
+    val scope = rememberCoroutineScope()                                // Corrutina para despachar el Flow de registro
 
     RegisterContent(
         username = username,
@@ -90,7 +99,20 @@ fun RegisterScreen(
 }
 
 /**
- * Pantalla Stateless de Registro: estilizada con el lenguaje visual de Figma Make.
+ * Pantalla Stateless de Registro:
+ * Renderiza la tarjeta visual del formulario de alta con validación en vivo,
+ * campos adaptados con teclado IME inteligente y navegación fluida hacia login.
+ *
+ * @param username Valor actual del campo nombre de usuario.
+ * @param onUsernameChange Notifica cambios en el nombre de usuario.
+ * @param email Valor actual del campo correo electrónico.
+ * @param onEmailChange Notifica cambios en el correo electrónico.
+ * @param password Valor actual del campo contraseña.
+ * @param onPasswordChange Notifica cambios en la contraseña.
+ * @param isLoading Bandera de progreso activo para deshabilitar botones y mostrar loader.
+ * @param errorMessage Mensaje descriptivo de error si la validación o el backend fallan.
+ * @param onRegisterClick Acción para enviar el formulario de registro.
+ * @param onNavigateToLogin Acción para navegar a la pantalla de inicio de sesión.
  */
 @Composable
 fun RegisterContent(

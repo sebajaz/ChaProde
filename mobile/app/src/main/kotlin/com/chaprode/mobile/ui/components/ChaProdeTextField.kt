@@ -18,8 +18,33 @@ import androidx.compose.ui.unit.sp
 import com.chaprode.mobile.ui.theme.*
 
 /**
- * Campo de texto estilizado según el prototipo de Figma Make.
- * Posee esquinas redondeadas de 14.dp, fondo oscuro semitransparente y resaltado celeste en foco.
+ * =========================================================================================
+ * ChaProdeTextField: Campo de texto de entrada de datos estilizado (Figma Make: .input / .modal input).
+ * =========================================================================================
+ * Propósito:
+ * Centralizar el diseño, colores de foco, validaciones de error y comportamiento de los
+ * formularios de Login, Registro, Creación de Ligas y configuración de IP.
+ * 
+ * Detalles de implementación:
+ * 1. Estética deportiva: Esquinas redondeadas de 14dp, fondo translúcido sobre el Deep Slate
+ *    y borde que transiciona a celeste cielo ([ChaProdeSky]) al recibir el foco del usuario.
+ * 2. Visual Transformation: Permite alternar entre texto plano y caracteres enmascarados (contraseñas).
+ * 3. Gestión reactiva de errores: Si [errorMessage] no es nulo, el borde cambia automáticamente
+ *    a rojo carmesí ([ChaProdeDanger]) y despliega el mensaje de error debajo del campo.
+ * 4. Control de teclado virtual: Soporte completo para [KeyboardOptions] (tipo de teclado email, contraseña, número)
+ *    y [KeyboardActions] (acción de presionar Enter / Enviar / Siguiente).
+ * 
+ * @param value Texto actual ingresado por el usuario.
+ * @param onValueChange Callback invocado cada vez que el usuario escribe o borra un carácter.
+ * @param label Etiqueta descriptiva flotante del campo (ej: "Correo Electrónico").
+ * @param modifier Modificador Compose.
+ * @param leadingIcon Icono colocado al inicio del campo (ej: candado, persona, correo).
+ * @param trailingIcon Componente composable al final del campo (ej: botón para ver/ocultar contraseña).
+ * @param visualTransformation Transformación visual (ej: [androidx.compose.ui.text.input.PasswordVisualTransformation]).
+ * @param keyboardOptions Configuración del teclado virtual (tipo IME, mayúsculas, etc.).
+ * @param keyboardActions Acciones al pulsar la tecla de confirmación del teclado virtual.
+ * @param errorMessage Mensaje de error para validaciones fallidas (ej: "Contraseña demasiado corta").
+ * @param enabled Si es false, deshabilita el campo.
  */
 @Composable
 fun ChaProdeTextField(
@@ -72,6 +97,10 @@ fun ChaProdeTextField(
                 errorLabelColor = ChaProdeDanger
             )
         )
+
+        // ---------------------------------------------------------------------------------
+        // Mensaje de Error Condicional (Alineado debajo del input)
+        // ---------------------------------------------------------------------------------
         if (errorMessage != null) {
             Text(
                 text = errorMessage,

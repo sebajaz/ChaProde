@@ -7,17 +7,27 @@ import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.config.*
 import java.util.*
 
+/**
+ * Utilidades criptográficas para contraseñas de usuarios.
+ * Utiliza el algoritmo BCrypt con factor de costo 12 (resistente a fuerza bruta).
+ */
 object SecurityUtils {
+    /** Genera el hash salado de una contraseña en texto claro. */
     fun hashPassword(password: String): String {
         return BCrypt.withDefaults().hashToString(12, password.toCharArray())
     }
 
+    /** Valida si una contraseña ingresada coincide con el hash almacenado en PostgreSQL. */
     fun verifyPassword(password: String, hashed: String): Boolean {
         val result = BCrypt.verifyer().verify(password.toCharArray(), hashed.toCharArray())
         return result.verified
     }
 }
 
+/**
+ * Gestor y emisor de tokens de sesión JSON Web Token (JWT).
+ * Configurado con algoritmo simétrico HMAC-256 y expiración automática de 72 horas.
+ */
 object JwtConfig {
     private var secret: String = "chaprode_super_secret_jwt_key_2026_very_long_and_safe_token"
     private var issuer: String = "http://0.0.0.0:8080/"

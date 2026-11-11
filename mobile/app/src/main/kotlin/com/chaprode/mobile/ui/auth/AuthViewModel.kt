@@ -10,21 +10,36 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel de Autenticación:
+ * Administra la máquina de estados reactiva de login y logout.
+ * Coordina llamadas a `AuthRepository`, actualiza el flujo `StateFlow` y maneja
+ * la persistencia automática de credenciales JWT en Android.
+ */
 class AuthViewModel(
     private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
+    // Flujo mutable privado que almacena el estado reactivo actual
     private val _uiState = MutableStateFlow(AuthUiState())
+    // Exposición pública de solo lectura para ser consumida por Jetpack Compose
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
-        // Comprobar si ya existe sesión activa localmente
+        // ----------------------------------------------------------------------------------------
+        // VERIFICACIÓN INICIAL DE SESIÓN ACTIVA
+        // ----------------------------------------------------------------------------------------
+        // Al instanciar el ViewModel, revisa si hay un usuario logueado en SessionManager.
         val currentUser = authRepository.getCurrentUser()
         if (currentUser != null && authRepository.isLoggedIn()) {
             _uiState.update { it.copy(user = currentUser, isSuccess = true) }
         }
     }
 
+    /**
+     * Procesador central de intenciones de la UI (MVI).
+     * Cada acción del usuario es procesada de forma atómica actualizando el estado reactivo.
+     */
     fun onEvent(event: AuthUiEvent) {
         when (event) {
             is AuthUiEvent.OnUsernameOrEmailChanged -> {

@@ -56,38 +56,56 @@ fun ProfileScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // --------------------------------------------------------------------------------------------
+    // ESTADO Y DEPENDENCIAS LOCALES
+    // --------------------------------------------------------------------------------------------
+    // Recupera la sesión actual persistida (id, username, email, rol, token JWT).
     val user: User? = SessionManager.getUser()
+    // Host para notificaciones flotantes (Snackbars) temporales al usuario.
     val snackbarHostState = remember { SnackbarHostState() }
+    // Ámbito de corrutinas para lanzar tareas asíncronas ligadas al ciclo de vida del Composable.
     val coroutineScope = rememberCoroutineScope()
 
-    // Cálculo de estadísticas reales del usuario a partir de los ViewModels
+    // --------------------------------------------------------------------------------------------
+    // SUSCRIPCIÓN A FLUJOS DE ESTADO (MVI / MVVM)
+    // --------------------------------------------------------------------------------------------
+    // Se recolecta el estado reactivo de pronósticos (lista de partidos, estado de carga, etc.)
     val predictionState = predictionViewModel?.uiState?.collectAsState()?.value
+    // Se recolecta el estado reactivo del ranking general del torneo activo
     val rankingState = rankingViewModel?.uiState?.collectAsState()?.value
 
+    // Filtra únicamente los partidos donde el usuario ya completó pronósticos válidos
     val myPredictions = remember(predictionState?.matches) {
         predictionState?.matches?.filter { it.miPronosticoLocal != null && it.miPronosticoVisitante != null } ?: emptyList()
     }
 
+    // Identifica la fila del ranking que pertenece al usuario en sesión
     val userRank = remember(rankingState?.ranking) {
         rankingState?.ranking?.firstOrNull { it.isCurrentUser }
     }
 
+    // Calcula el total de puntos acumulados (prioriza el servidor o suma localmente)
     val totalPoints = remember(myPredictions, userRank) {
         userRank?.puntosTotales ?: myPredictions.sumOf { it.puntosGanados }
     }
 
+    // Calcula el número de aciertos de resultado exacto (3 puntos)
     val exactCount = remember(myPredictions, userRank) {
         userRank?.plenosExactos ?: myPredictions.count { it.puntosGanados == 3 }
     }
 
+    // Texto representativo de la posición del usuario en el torneo activo (#1, #2 o #- si no rankea)
     val rankPositionText = remember(userRank) {
         if (userRank != null) "#${userRank.posicion}" else "# -"
     }
 
-    var showLogoutDialog by remember { mutableStateOf(false) }
-    var showServerConfigDialog by remember { mutableStateOf(false) }
-    var showEditProfileDialog by remember { mutableStateOf(false) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
+    // --------------------------------------------------------------------------------------------
+    // ESTADOS DE CONTROL PARA DIÁLOGOS Y PREFERENCIAS
+    // --------------------------------------------------------------------------------------------
+    var showLogoutDialog by remember { mutableStateOf(false) }          // Diálogo modal para confirmar salida
+    var showServerConfigDialog by remember { mutableStateOf(false) }    // Diálogo modal para editar IP/URL del backend
+    var showEditProfileDialog by remember { mutableStateOf(false) }     // Diálogo informativo de edición de perfil
+    var notificationsEnabled by remember { mutableStateOf(true) }       // Estado de preferencia de alertas
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -405,6 +423,9 @@ fun ProfileTopBar(
 
 /**
  * Sección de Identidad de Usuario (Figma Make: .profile)
+ * Muestra el avatar con gradiente e iniciales del usuario, nombre destacado, handle de usuario y rol.
+ *
+ * @param user Objeto de dominio del usuario logueado.
  */
 @Composable
 fun ProfileIdentitySection(user: User?) {
@@ -495,6 +516,10 @@ fun ProfileIdentitySection(user: User?) {
 
 /**
  * Tarjeta de 3 Métricas de Rendimiento (Figma Make: .profile-stats)
+ * Presenta en un diseño horizontal dividido por bordes sutiles:
+ * 1) Puntos Totales (en dorado ChaProdeGold)
+ * 2) Plenos Exactos (en verde éxito ChaProdeSuccess)
+ * 3) Posición en el Ranking (en cyan cielo ChaProdeSky)
  */
 @Composable
 fun ProfileStatsCard(
@@ -595,6 +620,8 @@ fun ProfileStatsCard(
 
 /**
  * Lista de Configuraciones y Ajustes (Figma Make: .settings-list)
+ * Agrupa las opciones de personalización, notificaciones, configuración técnica del servidor
+ * y la acción de cierre de sesión seguro.
  */
 @Composable
 fun SettingsListCard(
@@ -675,6 +702,17 @@ fun SettingsListCard(
     }
 }
 
+/**
+ * Fila interactiva reutilizable para cada elemento de configuración.
+ *
+ * @param icon Ícono representativo del ajuste.
+ * @param iconTint Color temático del ícono.
+ * @param title Título principal de la opción.
+ * @param subtitle Descripción secundaria o valor actual del ajuste.
+ * @param isDanger Si es verdadero, aplica color rojo ChaProdeDanger para advertir acciones críticas.
+ * @param badge Componente composable opcional para mostrar un chip o etiqueta al extremo derecho.
+ * @param onClick Acción a ejecutar al presionar la fila.
+ */
 @Composable
 fun SettingsListItem(
     icon: ImageVector,

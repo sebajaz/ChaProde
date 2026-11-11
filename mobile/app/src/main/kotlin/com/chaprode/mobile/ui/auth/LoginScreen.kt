@@ -41,7 +41,13 @@ import com.chaprode.mobile.ui.components.ChaProdeTextField
 import com.chaprode.mobile.ui.theme.*
 
 /**
- * Pantalla Stateful: maneja el ViewModel y las navegaciones de autenticación.
+ * Pantalla Stateful de Inicio de Sesión:
+ * Administra el ciclo de vida, la recolección reactiva del estado de `AuthViewModel`
+ * y los efectos secundarios de navegación ante un login exitoso.
+ *
+ * @param viewModel Instancia del ViewModel responsable de la lógica de autenticación.
+ * @param onNavigateToRegister Navegación a la pantalla de registro de nuevo usuario.
+ * @param onLoginSuccess Navegación al destino principal (`Home`) cuando la sesión se inicia con éxito.
  */
 @Composable
 fun LoginScreen(
@@ -49,14 +55,17 @@ fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
+    // Recolecta el estado reactivo de la UI emitido por el StateFlow del ViewModel
     val state by viewModel.uiState.collectAsState()
 
+    // Reacciona al cambio en state.isSuccess para redirigir al usuario al Home de la aplicación
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
             onLoginSuccess()
         }
     }
 
+    // Delega la renderización a la función visual pura (Stateless)
     LoginContent(
         state = state,
         onEvent = viewModel::onEvent,
@@ -65,8 +74,18 @@ fun LoginScreen(
 }
 
 /**
- * Pantalla Stateless: implementa el diseño visual de Figma Make (Fondo con glow ambiental,
- * tarjeta con borde de 24dp, logo en gradiente y pie de seguridad).
+ * Pantalla Stateless de Inicio de Sesión:
+ * Implementa el diseño visual de Figma Make con:
+ * - Fondo oscuro ambiental con resplandores radiales (Sky Blue superior y Gold inferior).
+ * - Tarjeta central de cristal oscuro con bordes redondeados de 24dp.
+ * - Logotipo tipográfico y badge de bienvenida.
+ * - Campos de entrada estilizados para usuario/email y contraseña con visibilidad alternable.
+ * - Botón de llamada a la acción con gradiente cyan y spinner de carga.
+ * - Diálogo técnico de configuración de servidor backend.
+ *
+ * @param state Estado inmutable de la pantalla (campos de texto, visibilidad, carga y errores).
+ * @param onEvent Emisor de intenciones del usuario hacia el ViewModel (MVI pattern).
+ * @param onNavigateToRegister Callback para alternar a la pantalla de registro.
  */
 @Composable
 fun LoginContent(

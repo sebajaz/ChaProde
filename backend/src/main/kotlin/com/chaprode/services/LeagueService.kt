@@ -5,6 +5,11 @@ import com.chaprode.repositories.LeagueRepository
 import java.security.SecureRandom
 import java.util.*
 
+/**
+ * Servicio de gestión de Ligas Privadas:
+ * Genera códigos criptográficamente seguros de 6 caracteres (alfanumérico sin caracteres confusos como O o 0),
+ * administra uniones de miembros y expone rankings internos.
+ */
 class LeagueService(
     private val leagueRepository: LeagueRepository = LeagueRepository()
 ) {

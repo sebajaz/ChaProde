@@ -25,15 +25,26 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
+/**
+ * Punto de entrada principal del servidor Ktor.
+ * Inicia el motor embebido Netty leyendo la configuración desde `application.conf`.
+ */
 fun main(args: Array<String>) {
     EngineMain.main(args)
 }
 
+/**
+ * Módulo principal de la aplicación ChaProde Backend:
+ * Configura la base de datos PostgreSQL, seguridad JWT, serialización JSON,
+ * middleware de CORS, control centralizado de errores, sincronizador de partidos y rutas REST.
+ */
 fun Application.module() {
     val log = LoggerFactory.getLogger("ChaProdeApplication")
     log.info("Inicializando ChaProde Backend...")
 
-    // 1. Inicializar Base de Datos PostgreSQL y Auto-Seed
+    // ----------------------------------------------------------------------------------------
+    // 1. INICIALIZACIÓN DE BASE DE DATOS POSTGRESQL Y SEMILLADO AUTOMÁTICO (EXPOSED ORM)
+    // ----------------------------------------------------------------------------------------
     try {
         DatabaseFactory.init(environment.config)
         log.info("Base de datos inicializada y conectada exitosamente.")
@@ -55,10 +66,14 @@ fun Application.module() {
         log.error("Fallo al inicializar la base de datos: {}", e.message)
     }
 
-    // 2. Configurar JWT
+    // ----------------------------------------------------------------------------------------
+    // 2. CONFIGURACIÓN DE SEGURIDAD Y TOKENS JWT (HMAC-256)
+    // ----------------------------------------------------------------------------------------
     JwtConfig.init(environment.config)
 
-    // 3. Serialización JSON
+    // ----------------------------------------------------------------------------------------
+    // 3. NEGOCIACIÓN DE CONTENIDO Y SERIALIZACIÓN JSON (KOTLINX.SERIALIZATION)
+    // ----------------------------------------------------------------------------------------
     install(ContentNegotiation) {
         json(Json {
             prettyPrint = true
@@ -68,7 +83,9 @@ fun Application.module() {
         })
     }
 
-    // 4. CORS (Para clientes Web y Mobile)
+    // ----------------------------------------------------------------------------------------
+    // 4. POLÍTICAS DE CORS PARA ACCESO DESDE APP MÓVIL Y PANEL WEB
+    // ----------------------------------------------------------------------------------------
     install(CORS) {
         allowMethod(HttpMethod.Options)
         allowMethod(HttpMethod.Put)
@@ -81,7 +98,9 @@ fun Application.module() {
         anyHost()
     }
 
-    // 5. Manejo Global de Excepciones (StatusPages)
+    // ----------------------------------------------------------------------------------------
+    // 5. GESTIÓN GLOBAL DE EXCEPCIONES Y CÓDIGOS DE ESTADO HTTP (STATUS PAGES)
+    // ----------------------------------------------------------------------------------------
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
             call.respond(
@@ -98,7 +117,9 @@ fun Application.module() {
         }
     }
 
-    // 6. Autenticación JWT
+    // ----------------------------------------------------------------------------------------
+    // 6. FILTRO DE AUTENTICACIÓN Y VERIFICACIÓN DE CREDENCIALES JWT
+    // ----------------------------------------------------------------------------------------
     install(Authentication) {
         jwt("auth-jwt") {
             realm = JwtConfig.getRealm()
@@ -120,7 +141,9 @@ fun Application.module() {
         }
     }
 
-    // 7. Configurar Servicios Deportivos y Scheduler en Segundo Plano (Opción 3 Híbrida)
+    // ----------------------------------------------------------------------------------------
+    // 7. SERVICIOS DEPORTIVOS Y TAREA EN SEGUNDO PLANO (SCHEDULER CADA 15 MIN)
+    // ----------------------------------------------------------------------------------------
     val footballApiToken = environment.config.propertyOrNull("footballApi.token")?.getString() ?: ""
     val footballApiBaseUrl = environment.config.propertyOrNull("footballApi.baseUrl")?.getString() ?: "https://api.football-data.org/v4"
     val syncIntervalMinutes = environment.config.propertyOrNull("footballApi.syncIntervalMinutes")?.getString()?.toLongOrNull() ?: 15L
@@ -140,7 +163,9 @@ fun Application.module() {
         matchSchedulerService.stop()
     }
 
-    // 8. Enrutamiento
+    // ----------------------------------------------------------------------------------------
+    // 8. TABLA DE ENRUTAMIENTO HTTP REST
+    // ----------------------------------------------------------------------------------------
     routing {
         get("/") {
             call.respond(ApiResponse.ok(mapOf("app" to "ChaProde API", "version" to "1.0.0"), "Bienvenido a ChaProde API"))

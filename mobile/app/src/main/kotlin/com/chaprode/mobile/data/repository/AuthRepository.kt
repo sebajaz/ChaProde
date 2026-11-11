@@ -18,6 +18,10 @@ class AuthRepository(
     private val sessionManager: SessionManager = SessionManager()
 ) {
 
+    /**
+     * Inicia sesión con credenciales contra el servidor REST.
+     * Al recibir confirmación exitosa, guarda el token JWT y el perfil de usuario en SessionManager.
+     */
     fun login(usernameOrEmail: String, password: String): Flow<Resource<User>> = flow {
         emit(Resource.Loading)
         val result = apiService.login(LoginRequestDto(usernameOrEmail.trim(), password))
@@ -40,6 +44,9 @@ class AuthRepository(
         )
     }
 
+    /**
+     * Registra una nueva cuenta de usuario y guarda la sesión automáticamente.
+     */
     fun register(username: String, email: String, password: String): Flow<Resource<User>> = flow {
         emit(Resource.Loading)
         val result = apiService.register(RegisterRequestDto(username.trim(), email.trim(), password))

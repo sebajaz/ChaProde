@@ -11,6 +11,13 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+/**
+ * Endpoints REST para ligas privadas entre amigos:
+ * - POST /api/ligas              : Creación de una liga privada.
+ * - POST /api/ligas/unirse       : Unión mediante código alfanumérico.
+ * - GET  /api/ligas/mis-ligas    : Listado de ligas del usuario.
+ * - GET  /api/ligas/{id}         : Detalle y ranking interno de la liga.
+ */
 fun Route.leagueRoutes(leagueService: LeagueService = LeagueService()) {
     route("/api/ligas") {
         authenticate("auth-jwt") {

@@ -10,6 +10,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+/**
+ * Endpoints REST para gestión de pronósticos:
+ * - POST /api/pronosticos            : Carga o edición de un pronóstico (requiere JWT).
+ * - GET  /api/pronosticos/mis-pronosticos : Listado de pronósticos propios del usuario.
+ */
 fun Route.predictionRoutes(predictionService: PredictionService = PredictionService()) {
     route("/api") {
         authenticate("auth-jwt") {

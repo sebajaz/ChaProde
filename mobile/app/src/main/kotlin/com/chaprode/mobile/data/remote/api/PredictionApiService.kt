@@ -11,6 +11,12 @@ import com.chaprode.mobile.data.remote.ApiConfig
 import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * Servicio de red HTTP para partidos y pronósticos.
+ * Permite consultar el fixture con los pronósticos previos y enviar nuevos marcadores.
+ *
+ * @param baseUrl Dirección base del servidor Ktor backend.
+ */
 class PredictionApiService(
     private val baseUrl: String = ApiConfig.BASE_URL
 ) {

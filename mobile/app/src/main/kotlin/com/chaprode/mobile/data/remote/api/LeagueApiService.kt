@@ -13,6 +13,12 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
+/**
+ * Servicio de red HTTP para ligas privadas entre amigos.
+ * Gestiona endpoints de creación, unión por código, listado y detalle con tabla interna.
+ *
+ * @param baseUrl Dirección base del servidor Ktor backend.
+ */
 class LeagueApiService(
     private val baseUrl: String = ApiConfig.BASE_URL
 ) {

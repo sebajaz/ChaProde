@@ -47,6 +47,25 @@ import com.chaprode.mobile.ui.league.LeagueViewModel
 import com.chaprode.mobile.ui.theme.*
 import kotlinx.coroutines.launch
 
+/**
+ * =========================================================================================
+ * LeaguesScreen: Pantalla de Comunidades y Ligas Privadas (Torneos de Amigos).
+ * =========================================================================================
+ * Propósito:
+ * Permite a los usuarios crear grupos cerrados con amigos, compañeros de trabajo o familiares,
+ * compartir un código de acceso único de 6 caracteres, y competir en una tabla de posiciones privada.
+ * 
+ * Funcionalidades clave:
+ * 1. Banner Héroe deportivo con degradado y llamado a la acción ([LeagueBanner]).
+ * 2. Acciones rápidas: "Crear Nueva Liga" y "Unirse con Código" ([LeagueActionsRow]).
+ * 3. Tarjeta de liga ([LeagueCard]) con badge de rol (Admin vs Miembro) y copiado de código al portapapeles.
+ * 4. Diálogos modales para creación ([CreateLeagueDialog]), unión ([JoinLeagueDialog])
+ *    y tabla de posiciones de la liga ([LeagueDetailRankingDialog]).
+ * 
+ * @param viewModel ViewModel que gestiona las llamadas de ligas a la API Ktor.
+ * @param showBack Si es true, renderiza un botón para volver atrás.
+ * @param onNavigateBack Callback de navegación hacia atrás.
+ */
 @Composable
 fun LeaguesScreen(
     viewModel: LeagueViewModel,
@@ -63,6 +82,9 @@ fun LeaguesScreen(
     )
 }
 
+/**
+ * Contenido principal composable de Ligas Privadas.
+ */
 @Composable
 fun LeaguesContent(
     state: LeagueUiState,
@@ -74,10 +96,12 @@ fun LeaguesContent(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    // Carga las ligas a las que pertenece el usuario al abrir la pantalla
     LaunchedEffect(Unit) {
         onEvent(LeagueUiEvent.LoadLeagues)
     }
 
+    // Muestra notificaciones flotantes (Snackbars) ante éxito o error
     LaunchedEffect(state.successMessage, state.errorMessage) {
         state.successMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -99,7 +123,7 @@ fun LeaguesContent(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            // Cabecera superior con botón de actualizar (y volver si corresponde)
+            // Cabecera superior con botón de actualizar
             LeaguesTopBar(
                 showBack = showBack,
                 onNavigateBack = onNavigateBack,
@@ -113,12 +137,16 @@ fun LeaguesContent(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(bottom = 28.dp)
             ) {
+                // -------------------------------------------------------------------------
                 // 1. BANNER HÉROE (Figma Make: .league-banner)
+                // -------------------------------------------------------------------------
                 item {
                     LeagueBanner()
                 }
 
+                // -------------------------------------------------------------------------
                 // 2. BOTONES DE ACCIÓN: CREAR Y UNIRSE (Figma Make: .league-actions)
+                // -------------------------------------------------------------------------
                 item {
                     LeagueActionsRow(
                         onCreateClick = { onEvent(LeagueUiEvent.OnOpenCreateDialog(true)) },
@@ -126,7 +154,9 @@ fun LeaguesContent(
                     )
                 }
 
+                // -------------------------------------------------------------------------
                 // 3. TÍTULO DE SECCIÓN
+                // -------------------------------------------------------------------------
                 item {
                     Spacer(modifier = Modifier.height(4.dp))
                     Column {
@@ -147,7 +177,9 @@ fun LeaguesContent(
                     }
                 }
 
+                // -------------------------------------------------------------------------
                 // 4. LISTADO O ESTADOS DE CARGA/VACÍO
+                // -------------------------------------------------------------------------
                 if (state.isLoading && state.leagues.isEmpty()) {
                     item {
                         Box(
@@ -168,6 +200,7 @@ fun LeaguesContent(
                         }
                     }
                 } else if (state.leagues.isEmpty()) {
+                    // Estado vacío cuando el usuario aún no tiene ligas creadas ni unidas
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -212,10 +245,12 @@ fun LeaguesContent(
                         }
                     }
                 } else {
+                    // Lista de tarjetas de ligas
                     items(state.leagues, key = { it.id }) { league ->
                         LeagueCard(
                             league = league,
                             onCopyCode = {
+                                // Copia el código de acceso al portapapeles del sistema operativo
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 val clip = ClipData.newPlainText("Código de Liga", league.codigoAcceso)
                                 clipboard.setPrimaryClip(clip)
@@ -224,6 +259,7 @@ fun LeaguesContent(
                                 }
                             },
                             onViewLeaderboard = {
+                                // Abre el modal de ranking específico de esta liga
                                 onEvent(LeagueUiEvent.OnSelectLeague(league.id))
                             }
                         )
@@ -233,7 +269,9 @@ fun LeaguesContent(
         }
     }
 
-    // DIÁLOGO CREAR LIGA (Figma Make: .modal)
+    // -------------------------------------------------------------------------------------
+    // Diálogos Modales (Figma Make: .modal)
+    // -------------------------------------------------------------------------------------
     if (state.isCreateDialogOpen) {
         CreateLeagueDialog(
             leagueName = state.newLeagueName,
@@ -243,7 +281,6 @@ fun LeaguesContent(
         )
     }
 
-    // DIÁLOGO UNIRSE CON CÓDIGO (Figma Make: .modal)
     if (state.isJoinDialogOpen) {
         JoinLeagueDialog(
             joinCode = state.joinCode,
@@ -253,7 +290,6 @@ fun LeaguesContent(
         )
     }
 
-    // MODAL DETALLE DE LIGA CON RANKING
     state.selectedLeagueDetail?.let { detail ->
         LeagueDetailRankingDialog(
             detail = detail,
@@ -263,7 +299,7 @@ fun LeaguesContent(
 }
 
 /**
- * Cabecera superior con acciones
+ * Cabecera superior con título y botón de recarga.
  */
 @Composable
 fun LeaguesTopBar(
@@ -323,7 +359,7 @@ fun LeaguesTopBar(
 }
 
 /**
- * Banner Héroe de Ligas Privadas (Figma Make: .league-banner)
+ * Banner Héroe de Ligas Privadas (Figma Make: .league-banner).
  */
 @Composable
 fun LeagueBanner() {
@@ -331,7 +367,7 @@ fun LeagueBanner() {
         modifier = Modifier
             .fillMaxWidth()
             .drawBehind {
-                // Brillo radial cyan superior derecho
+                // Resplandor radial celeste en la esquina superior derecha
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(ChaProdeSky.copy(alpha = 0.22f), Color.Transparent),
@@ -355,7 +391,7 @@ fun LeagueBanner() {
                 .padding(22.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Ícono de Comunidad (Figma Make: .league-banner__icon)
+                // Ícono de Comunidad dentro de caja redondeada
                 Box(
                     modifier = Modifier
                         .size(50.dp)
@@ -407,7 +443,7 @@ fun LeagueBanner() {
 }
 
 /**
- * Botones de Acción Rápida (Figma Make: .league-actions)
+ * Botones de Acción Rápida (Figma Make: .league-actions).
  */
 @Composable
 fun LeagueActionsRow(
@@ -418,7 +454,7 @@ fun LeagueActionsRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Crear Nueva Liga (Primary CTA Gradient)
+        // Crear Nueva Liga (Primary CTA)
         Button(
             onClick = onCreateClick,
             modifier = Modifier
@@ -478,7 +514,7 @@ fun LeagueActionsRow(
 }
 
 /**
- * Tarjeta de Liga Privada (Figma Make: .league-card)
+ * Tarjeta individual de Liga Privada (Figma Make: .league-card).
  */
 @Composable
 fun LeagueCard(
@@ -510,7 +546,7 @@ fun LeagueCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Logotipo de Copa / Trofeo de la Liga (Figma Make: .league-card__logo)
+                // Logotipo de Trofeo de la Liga
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -567,7 +603,7 @@ fun LeagueCard(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Badge de Rol (Administrador vs Participante)
+                // Badge distintivo de Rol (Administrador vs Miembro)
                 if (isCreator) {
                     Box(
                         modifier = Modifier
@@ -603,7 +639,9 @@ fun LeagueCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
+            // -----------------------------------------------------------------------------
             // Caja con Código de Invitación y Botón de Copiado Rápido
+            // -----------------------------------------------------------------------------
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -653,7 +691,7 @@ fun LeagueCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botón para Ver la Tabla de Posiciones
+            // Botón para ver las posiciones de la comunidad
             Button(
                 onClick = onViewLeaderboard,
                 modifier = Modifier
@@ -695,7 +733,7 @@ fun LeagueCard(
 }
 
 /**
- * Diálogo Estilizado para Crear Liga (Figma Make: .modal)
+ * Diálogo Estilizado para Crear Liga (Figma Make: .modal).
  */
 @Composable
 fun CreateLeagueDialog(
@@ -770,7 +808,7 @@ fun CreateLeagueDialog(
 }
 
 /**
- * Diálogo Estilizado para Unirse a Liga con Código (Figma Make: .modal)
+ * Diálogo Estilizado para Unirse a Liga con Código (Figma Make: .modal).
  */
 @Composable
 fun JoinLeagueDialog(
@@ -843,7 +881,7 @@ fun JoinLeagueDialog(
 }
 
 /**
- * Diálogo de Detalle y Clasificación de la Liga
+ * Diálogo de Detalle y Clasificación de la Liga Privada.
  */
 @Composable
 fun LeagueDetailRankingDialog(

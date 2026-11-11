@@ -10,14 +10,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel de Ligas Privadas:
+ * Administra el ciclo de vida de creación, unión y consulta de clasificaciones
+ * internas de ligas entre amigos.
+ */
 class LeagueViewModel(
     private val repository: LeagueRepository = LeagueRepository()
 ) : ViewModel() {
 
+    // Estado reactivo mutable de ligas
     private val _uiState = MutableStateFlow(LeagueUiState())
+    // Flujo expuesto de solo lectura
     val uiState: StateFlow<LeagueUiState> = _uiState.asStateFlow()
 
     init {
+        // Carga inicial automática de las ligas del usuario al iniciar la pantalla
         loadLeagues()
     }
 

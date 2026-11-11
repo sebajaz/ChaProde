@@ -7,10 +7,18 @@ import com.chaprode.security.JwtConfig
 import com.chaprode.security.SecurityUtils
 import java.util.*
 
+/**
+ * Servicio de lógica de negocio para Autenticación y Registro:
+ * Aplica validaciones de formato de email, longitud de clave y unicidad de cuenta,
+ * hashea contraseñas con BCrypt y emite tokens JWT firmados.
+ */
 class AuthService(
     private val userRepository: UserRepository = UserRepository()
 ) {
 
+    /**
+     * Registra un nuevo usuario en la base de datos tras validar formato y unicidad.
+     */
     suspend fun register(request: RegisterRequest): AuthResponse {
         val username = request.username.trim()
         val email = request.email.trim().lowercase()
@@ -54,6 +62,10 @@ class AuthService(
         return AuthResponse(token = token, user = userDto)
     }
 
+    /**
+     * Valida credenciales contra la base de datos comparando el hash BCrypt
+     * y genera un token JWT con vigencia de 72 horas.
+     */
     suspend fun login(request: LoginRequest): AuthResponse {
         val identifier = request.usernameOrEmail.trim()
         val password = request.password

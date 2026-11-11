@@ -10,11 +10,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel de Pronósticos y Fixture:
+ * Gestiona la carga de partidos, edición de marcadores en memoria con validación (0-99),
+ * persistencia de pronósticos en la API REST respetando la regla de bloqueo previo a los partidos
+ * y notificación de confirmación al usuario.
+ */
 class PredictionViewModel(
     private val repository: PredictionRepository = PredictionRepository()
 ) : ViewModel() {
 
+    // Estado reactivo mutable de la pantalla de pronósticos
     private val _uiState = MutableStateFlow(PredictionUiState())
+    // Flujo expuesto de solo lectura para la vista de Compose
     val uiState: StateFlow<PredictionUiState> = _uiState.asStateFlow()
 
     fun onEvent(event: PredictionUiEvent) {

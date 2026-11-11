@@ -11,10 +11,19 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
 
+/**
+ * Fábrica y administrador del pool de conexiones a la base de datos PostgreSQL.
+ * Utiliza HikariCP para alto rendimiento en conexiones concurrentes y Exposed ORM
+ * para la definición declarativa de tablas y transacciones seguras con corrutinas.
+ */
 object DatabaseFactory {
     private val log = LoggerFactory.getLogger(DatabaseFactory::class.java)
     private var dataSource: HikariDataSource? = null
 
+    /**
+     * Inicializa el pool HikariCP a partir del archivo de configuración `application.conf`,
+     * establece la conexión con PostgreSQL y sincroniza el esquema de tablas si no existen.
+     */
     fun init(config: ApplicationConfig) {
         val jdbcUrl = config.propertyOrNull("database.jdbcUrl")?.getString()
             ?: "jdbc:postgresql://localhost:5432/chaprode_db"
@@ -57,9 +66,16 @@ object DatabaseFactory {
         }
     }
 
+    /**
+     * Ejecuta un bloque de código transaccional sobre la base de datos en el despachador Dispatchers.IO.
+     * Garantiza el aislamiento de transacciones de lectura y escritura sin bloquear hilos del servidor.
+     */
     suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 
+    /**
+     * Comprueba la conectividad activa contra el motor PostgreSQL mediante una consulta rápida.
+     */
     fun checkHealth(): Boolean {
         return try {
             transaction {

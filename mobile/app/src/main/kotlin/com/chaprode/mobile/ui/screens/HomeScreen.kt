@@ -45,9 +45,32 @@ import com.chaprode.mobile.ui.prediction.PredictionViewModel
 import com.chaprode.mobile.ui.ranking.RankingUiEvent
 import com.chaprode.mobile.ui.ranking.RankingViewModel
 import com.chaprode.mobile.ui.theme.*
-import kotlinx.coroutines.delay
 import java.util.Calendar
 
+/**
+ * =========================================================================================
+ * HomeScreen: Pantalla Principal / Tablero de Control Deportivo (Dashboard).
+ * =========================================================================================
+ * Propósito:
+ * Es el centro neurálgico que recibe al usuario autenticado. Presenta en un solo vistazo:
+ * 1. Cabecera contextual con saludo según la hora del día, puntos acumulados y notificaciones.
+ * 2. Sección Héroe destacando el próximo partido pendiente o en vivo con acceso directo a pronosticar.
+ * 3. Grilla asimétrica de accesos rápidos hacia Fixture, Ranking Global y Ligas Privadas.
+ * 4. Tarjeta de estadísticas reales calculadas en vivo (Partidos pronosticados, Plenos exactos y Puntos).
+ * 
+ * Arquitectura:
+ * - Carga asíncrona de datos en segundo plano mediante [LaunchedEffect] sobre los ViewModels.
+ * - Cero datos ficticios: toda la información visual proviene de las entidades de Room y la API Ktor.
+ * 
+ * @param viewModel ViewModel de autenticación con el perfil del usuario actual.
+ * @param predictionViewModel ViewModel para el fixture, lista de partidos y predicciones registradas.
+ * @param rankingViewModel ViewModel con la tabla de clasificación general y posiciones.
+ * @param leagueViewModel ViewModel con las ligas privadas a las que pertenece el usuario.
+ * @param onNavigateToFixture Callback para saltar a la pantalla de Fixture completo.
+ * @param onNavigateToRanking Callback para saltar a la pantalla de Tabla de Posiciones y Podio.
+ * @param onNavigateToLeagues Callback para saltar a la pantalla de Ligas Privadas.
+ * @param onLogout Callback opcional de cierre de sesión (retrocompatibilidad).
+ */
 @Suppress("UNUSED_PARAMETER")
 @Composable
 fun HomeScreen(
@@ -60,15 +83,21 @@ fun HomeScreen(
     onNavigateToLeagues: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+    // Solicita en Android 13+ (API 33) el permiso POST_NOTIFICATIONS para alertas de cierre de partidos
     RequestNotificationPermissionEffect()
 
-    // Cargar datos reales en segundo plano para el Hero match, stats y rankings
+    // -------------------------------------------------------------------------------------
+    // Disparo de carga inicial de datos en segundo plano al entrar al Dashboard
+    // -------------------------------------------------------------------------------------
     LaunchedEffect(Unit) {
         predictionViewModel?.onEvent(PredictionUiEvent.LoadMatches("todos"))
         rankingViewModel?.onEvent(RankingUiEvent.LoadRanking("todos"))
         leagueViewModel?.onEvent(LeagueUiEvent.LoadLeagues)
     }
 
+    // -------------------------------------------------------------------------------------
+    // Recolección de estados reactivos desde los ViewModels (MVI / StateFlow)
+    // -------------------------------------------------------------------------------------
     val authState by viewModel.uiState.collectAsState()
     val predictionState = predictionViewModel?.uiState?.collectAsState()?.value
     val rankingState = rankingViewModel?.uiState?.collectAsState()?.value
@@ -76,9 +105,13 @@ fun HomeScreen(
 
     val user = authState.user
     val matches = predictionState?.matches.orEmpty()
+    
+    // Identifica el próximo partido que el usuario debe jugar o que está disputándose
     val nextMatch = matches.firstOrNull { it.estado == "PENDIENTE" || it.estado == "EN_JUEGO" }
     
-    // Cálculo de estadísticas reales del usuario
+    // -------------------------------------------------------------------------------------
+    // Métricas en tiempo real calculadas sin datos simulados:
+    // -------------------------------------------------------------------------------------
     val myPredictedMatches = matches.filter { it.miPronosticoLocal != null && it.miPronosticoVisitante != null }
     val totalUserPoints = myPredictedMatches.sumOf { it.puntosGanados }
     val plenosCount = myPredictedMatches.count { it.puntosGanados == 3 }
@@ -101,6 +134,7 @@ fun HomeScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
+            // Barra superior con saludo contextual, medalla de puntos dorada y campana
             HomeTopBar(
                 username = user?.username ?: "Pronosticador",
                 points = totalUserPoints,
@@ -118,7 +152,9 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // 1. HERO MATCH: Próximo Partido Destacado
+            // -----------------------------------------------------------------------------
+            // 1. HERO MATCH: Próximo Partido Destacado con cuenta regresiva y botón de acción
+            // -----------------------------------------------------------------------------
             HeroMatchSection(
                 nextMatch = nextMatch,
                 onPredictClick = onNavigateToFixture
@@ -126,7 +162,9 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 2. ACCESOS RÁPIDOS ASIMÉTRICOS
+            // -----------------------------------------------------------------------------
+            // 2. ACCESOS RÁPIDOS: Grilla asimétrica hacia Fixture, Ranking y Ligas
+            // -----------------------------------------------------------------------------
             SectionHeader(
                 eyebrow = "ACCESOS RÁPIDOS",
                 title = "¿Qué quieres hacer?"
@@ -145,7 +183,9 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(26.dp))
 
-            // 3. SECCIÓN TU RENDIMIENTO
+            // -----------------------------------------------------------------------------
+            // 3. TU RENDIMIENTO: Métricas de pronósticos, porcentaje de acierto y puntos
+            // -----------------------------------------------------------------------------
             SectionHeader(
                 eyebrow = "TU RENDIMIENTO",
                 title = "Estadísticas generales",
@@ -168,7 +208,12 @@ fun HomeScreen(
 }
 
 /**
- * Barra superior de Inicio con saludo contextual, chip de puntos y campana (Figma Make reference: .topbar).
+ * =========================================================================================
+ * HomeTopBar: Cabecera superior con saludo contextual y chip de puntos (Figma Make: .topbar).
+ * =========================================================================================
+ * @param username Nombre del usuario autenticado para personalizar el saludo.
+ * @param points Total acumulado de puntos para mostrar en el badge dorado.
+ * @param onNotificationsClick Acción disparada al tocar el botón de notificaciones.
  */
 @Composable
 fun HomeTopBar(
@@ -177,6 +222,7 @@ fun HomeTopBar(
     onNotificationsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Determina el saludo según la hora del reloj del sistema del teléfono
     val greeting = remember {
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         when (hour) {
@@ -195,6 +241,7 @@ fun HomeTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Bloque de saludo personalizado
         Column {
             Text(
                 text = greeting,
@@ -218,6 +265,7 @@ fun HomeTopBar(
             }
         }
 
+        // Bloque derecho: Medalla de Puntos + Campana de Notificaciones
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -272,7 +320,7 @@ fun HomeTopBar(
                     tint = ChaProdeSilver,
                     modifier = Modifier.size(20.dp)
                 )
-                // Punto rojo indicador
+                // Punto rojo indicador de novedad
                 Box(
                     modifier = Modifier
                         .size(8.dp)
@@ -287,7 +335,11 @@ fun HomeTopBar(
 }
 
 /**
- * Tarjeta Hero del Próximo Partido Destacado con contador regresivo y CTA (Figma Make reference: .hero-match).
+ * =========================================================================================
+ * HeroMatchSection: Tarjeta Héroe del Próximo Partido Destacado (Figma Make: .hero-match).
+ * =========================================================================================
+ * @param nextMatch Objeto con el partido más cercano y el pronóstico actual del usuario.
+ * @param onPredictClick Navega hacia el fixture para ingresar o editar el pronóstico.
  */
 @Composable
 fun HeroMatchSection(
@@ -312,7 +364,7 @@ fun HeroMatchSection(
                     )
                 )
         ) {
-            // Acento vertical en el borde izquierdo (Sky a Gold)
+            // Acento vertical decorativo en el borde izquierdo (Sky a Gold)
             Box(
                 modifier = Modifier
                     .width(4.dp)
@@ -360,7 +412,7 @@ fun HeroMatchSection(
                         )
                     }
 
-                    // Contador regresivo visual
+                    // Contador regresivo o estado en vivo
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = ChaProdeBg.copy(alpha = 0.75f),
@@ -389,7 +441,9 @@ fun HeroMatchSection(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Equipos versus
+                // -------------------------------------------------------------------------
+                // Enfrentamiento de Equipos (Local vs Visitante con Escudos Vectoriales)
+                // -------------------------------------------------------------------------
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -419,7 +473,7 @@ fun HeroMatchSection(
                         )
                     }
 
-                    // Separador VS con horario
+                    // Separador VS con horario del encuentro
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.padding(horizontal = 10.dp)
@@ -479,7 +533,13 @@ fun HeroMatchSection(
 }
 
 /**
- * Cuadrícula Asimétrica de Accesos Rápidos (Figma Make reference: .quick-grid).
+ * =========================================================================================
+ * QuickAccessGrid: Cuadrícula Asimétrica de Accesos Rápidos (Figma Make: .quick-grid).
+ * =========================================================================================
+ * Disposición:
+ * 1. Tarjeta Grande de Fixture (ancho completo) con badge de partidos pendientes.
+ * 2. Tarjeta de Ranking con la posición del usuario (#X global).
+ * 3. Tarjeta de Ligas Privadas con el total de comunidades a las que pertenece.
  */
 @Composable
 fun QuickAccessGrid(
@@ -495,7 +555,7 @@ fun QuickAccessGrid(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Card Grande: Fixture & Pronósticos (Ocupa ancho completo)
+        // Tarjeta Grande: Fixture & Pronósticos
         Card(
             onClick = onFixtureClick,
             modifier = Modifier.fillMaxWidth(),
@@ -550,12 +610,12 @@ fun QuickAccessGrid(
             }
         }
 
-        // Fila con 2 Cards Cuadradas: Ranking Global y Ligas de Amigos
+        // Fila con 2 Tarjetas Cuadradas: Ranking Global y Ligas de Amigos
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Card Ranking
+            // Tarjeta Ranking
             Card(
                 onClick = onRankingClick,
                 modifier = Modifier.weight(1f),
@@ -601,7 +661,7 @@ fun QuickAccessGrid(
                 }
             }
 
-            // Card Ligas de Amigos
+            // Tarjeta Ligas de Amigos
             Card(
                 onClick = onLeaguesClick,
                 modifier = Modifier.weight(1f),
@@ -651,7 +711,13 @@ fun QuickAccessGrid(
 }
 
 /**
- * Tarjeta de Rendimiento Semanal / General (Figma Make reference: .stats-card).
+ * =========================================================================================
+ * PerformanceStatsCard: Tarjeta de Rendimiento en 3 Columnas (Figma Make: .stats-card).
+ * =========================================================================================
+ * @param predictedCount Cantidad de partidos que el usuario ya pronosticó.
+ * @param totalMatchesCount Total de partidos en la cartelera.
+ * @param exactCount Cantidad de plenos acertados (marcador exacto = 3 puntos).
+ * @param totalPoints Sumatoria real de puntos obtenidos en los partidos evaluados.
  */
 @Composable
 fun PerformanceStatsCard(
@@ -674,7 +740,7 @@ fun PerformanceStatsCard(
                 .padding(vertical = 16.dp, horizontal = 10.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-            // Columna Pronósticos
+            // Columna 1: Pronósticos Totales Jugados
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -694,7 +760,7 @@ fun PerformanceStatsCard(
                 )
             }
 
-            // Divisor vertical
+            // Separador vertical
             Box(
                 modifier = Modifier
                     .width(1.dp)
@@ -702,7 +768,7 @@ fun PerformanceStatsCard(
                     .background(ChaProdeBorder)
             )
 
-            // Columna Plenos Exactos
+            // Columna 2: Plenos Exactos y Porcentaje de Efectividad
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -723,7 +789,7 @@ fun PerformanceStatsCard(
                 )
             }
 
-            // Divisor vertical
+            // Separador vertical
             Box(
                 modifier = Modifier
                     .width(1.dp)
@@ -731,7 +797,7 @@ fun PerformanceStatsCard(
                     .background(ChaProdeBorder)
             )
 
-            // Columna Puntos
+            // Columna 3: Puntos Totales Acumulados
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -755,7 +821,7 @@ fun PerformanceStatsCard(
 }
 
 /**
- * Encabezado de sección con kicker y acción opcional.
+ * Encabezado de sección con kicker (eyebrow) en celeste y enlace de acción opcional a la derecha.
  */
 @Composable
 fun SectionHeader(

@@ -11,6 +11,12 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+/**
+ * Endpoints REST para autenticación de usuarios:
+ * - POST /api/auth/register : Registro de cuenta nueva.
+ * - POST /api/auth/login    : Autenticación con credenciales y emisión de JWT.
+ * - GET  /api/auth/me       : Consulta del perfil del usuario en sesión (requiere JWT).
+ */
 fun Route.authRoutes(authService: AuthService = AuthService()) {
     route("/api/auth") {
 

@@ -20,6 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chaprode.mobile.ui.theme.*
 
+/**
+ * =========================================================================================
+ * ButtonVariant: Variantes de estilo para los botones del sistema de diseño ChaProde.
+ * =========================================================================================
+ * - [Primary]: Acción principal con gradiente azul eléctrico [ChaProdeCtaGradient].
+ * - [Secondary]: Acción secundaria con superficie oscura elevada y borde sutil [ChaProdeBorder].
+ * - [Ghost]: Botón minimalista sin fondo para cancelaciones o enlaces secundarios.
+ */
 enum class ButtonVariant {
     Primary,    // Gradiente azul CTA
     Secondary,  // Superficie oscura con borde
@@ -27,9 +35,25 @@ enum class ButtonVariant {
 }
 
 /**
- * Botón principal de la aplicación ChaProde.
- * Diseñado con soporte de gradiente azul CTA, variantes Secondary y Ghost, e iconos laterales.
- * Mantiene 100% de compatibilidad con todas las firmas existentes del proyecto.
+ * =========================================================================================
+ * ChaProdeButton: Botón de acción principal reutilizable (Figma Make: .button).
+ * =========================================================================================
+ * Características:
+ * 1. Soporte para indicador de carga ([CircularProgressIndicator]) integrado que bloquea clics repetidos.
+ * 2. Iconos opcionales inicial ([leadingIcon]) o final ([trailingIcon]) con alineación automática.
+ * 3. Altura ergonómica táctil de 52dp según las directrices de accesibilidad móvil.
+ * 4. Gestión de estados deshabilitados ([enabled] = false) con atenuación visual.
+ * 
+ * @param text Etiqueta o texto que se muestra en el centro del botón.
+ * @param onClick Acción a ejecutar al presionar el botón.
+ * @param modifier Modificador Compose para personalizar ancho o márgenes.
+ * @param variant Estilo visual ([ButtonVariant.Primary], [Secondary], [Ghost]).
+ * @param isLoading Si es true, reemplaza el texto por un spinner giratorio y deshabilita clics.
+ * @param enabled Si es false, atenúa el botón y bloquea la interacción táctil.
+ * @param leadingIcon Icono vectorial opcional colocado a la izquierda del texto.
+ * @param trailingIcon Icono vectorial opcional colocado a la derecha del texto.
+ * @param containerColor Sobrescritura opcional del color de fondo si no se usa la variante estándar.
+ * @param contentColor Sobrescritura opcional del color de texto e iconos.
  */
 @Composable
 fun ChaProdeButton(
@@ -47,12 +71,14 @@ fun ChaProdeButton(
     val shape = RoundedCornerShape(14.dp)
     val isPrimary = variant == ButtonVariant.Primary && containerColor == null
 
+    // Resolución del color del contenido (texto e iconos)
     val resolvedContentColor = contentColor ?: when (variant) {
         ButtonVariant.Primary -> Color.White
         ButtonVariant.Secondary -> Color.White
         ButtonVariant.Ghost -> ChaProdeMuted
     }
 
+    // Resolución del color del contenedor de fondo
     val resolvedContainerColor = when {
         containerColor != null -> containerColor
         variant == ButtonVariant.Primary -> Color.Transparent
@@ -60,6 +86,7 @@ fun ChaProdeButton(
         else -> Color.Transparent
     }
 
+    // Borde aplicado únicamente a la variante secundaria
     val border = when {
         !enabled -> null
         variant == ButtonVariant.Secondary -> BorderStroke(1.dp, ChaProdeBorder)
@@ -73,6 +100,7 @@ fun ChaProdeButton(
             .fillMaxWidth()
             .height(52.dp)
             .then(
+                // Si es Primary y está habilitado, aplica el gradiente CTA oficial
                 if (isPrimary && enabled && !isLoading) {
                     Modifier.background(ChaProdeCtaGradient, shape)
                 } else {
@@ -89,6 +117,7 @@ fun ChaProdeButton(
         ),
         contentPadding = PaddingValues(horizontal = 18.dp)
     ) {
+        // Si está en estado de carga (ej: esperando respuesta de autenticación de Ktor)
         if (isLoading) {
             CircularProgressIndicator(
                 color = Color.White,
@@ -96,6 +125,7 @@ fun ChaProdeButton(
                 modifier = Modifier.size(24.dp)
             )
         } else {
+            // Contenido regular del botón: Icono Izquierdo + Texto + Icono Derecho
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
