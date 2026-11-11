@@ -64,10 +64,13 @@ object ApiConfig {
         if (sharedPrefs == null) {
             sharedPrefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             val savedUrl = sharedPrefs?.getString(KEY_BASE_URL, null)
-            BASE_URL = if (!savedUrl.isNullOrBlank()) {
+            // Si no hay URL guardada, o si la guardada es una IP local interna (192.168.x.x o 10.0.2.2),
+            // se actualiza automáticamente al túnel público HTTPS de Cloudflare para funcionar en 4G/5G.
+            BASE_URL = if (!savedUrl.isNullOrBlank() && !savedUrl.contains("192.168.") && !savedUrl.contains("10.0.2.2")) {
                 savedUrl
             } else {
-                getDefaultUrl()
+                sharedPrefs?.edit()?.putString(KEY_BASE_URL, DEFAULT_PRODUCTION_TUNNEL_URL)?.apply()
+                DEFAULT_PRODUCTION_TUNNEL_URL
             }
         }
     }
