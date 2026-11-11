@@ -307,17 +307,24 @@ fun ProfileScreen(
                     ) {
                         TextButton(
                             onClick = {
+                                tempUrl = ApiConfig.DEFAULT_PRODUCTION_TUNNEL_URL
+                            }
+                        ) {
+                            Text("🌐 4G/Cloudflare", fontSize = 10.5.sp, color = ChaProdeSuccess, fontWeight = FontWeight.Bold)
+                        }
+                        TextButton(
+                            onClick = {
                                 tempUrl = ApiConfig.DEFAULT_PC_WIFI_URL
                             }
                         ) {
-                            Text("Wi-Fi (PC)", fontSize = 11.sp, color = ChaProdeSky)
+                            Text("Wi-Fi (PC)", fontSize = 10.5.sp, color = ChaProdeSky)
                         }
                         TextButton(
                             onClick = {
                                 tempUrl = ApiConfig.DEFAULT_EMULATOR_URL
                             }
                         ) {
-                            Text("Emulador (10.0.2.2)", fontSize = 11.sp, color = ChaProdeMuted)
+                            Text("Emulador", fontSize = 10.5.sp, color = ChaProdeMuted)
                         }
                     }
                 }

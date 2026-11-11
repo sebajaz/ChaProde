@@ -72,6 +72,18 @@ services:
     networks:
       - chaprode-network
 
+  # 🌐 4. TÚNEL PÚBLICO HTTPS CLOUDFLARE (ACCESO MÓVIL 4G/5G Y WI-FI EXTERNO)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: chaprode-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://backend:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - chaprode-network
+
 networks:
   chaprode-network:
     driver: bridge

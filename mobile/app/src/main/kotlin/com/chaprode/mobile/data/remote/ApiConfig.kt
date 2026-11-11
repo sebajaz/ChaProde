@@ -33,6 +33,9 @@ object ApiConfig {
     // URLs Predefinidas de Entorno:
     // -------------------------------------------------------------------------------------
 
+    /** URL pública segura HTTPS del túnel Cloudflare para acceso desde datos móviles (4G/5G) y cualquier Wi-Fi externo */
+    const val DEFAULT_PRODUCTION_TUNNEL_URL = "https://sustainability-download-spectrum-version.trycloudflare.com"
+
     /** URL fija para el emulador de Android Studio (mapeo loopback de Android a la PC anfitriona) */
     const val DEFAULT_EMULATOR_URL = "http://10.0.2.2:8080"
 
@@ -44,9 +47,9 @@ object ApiConfig {
 
     /**
      * URL Base activa que consumen todos los servicios API de Retrofit/KtorClient en la aplicación.
-     * Su valor puede ser leído públicamente, pero solo modificado mediante [setBaseUrl] o [resetToDefault].
+     * Por defecto se conecta a la URL de producción con túnel HTTPS para funcionar en cualquier conexión.
      */
-    var BASE_URL: String = DEFAULT_EMULATOR_URL
+    var BASE_URL: String = DEFAULT_PRODUCTION_TUNNEL_URL
         private set
 
     /**
@@ -88,11 +91,11 @@ object ApiConfig {
     }
 
     /**
-     * Retorna la URL por defecto correspondiente al entorno de hardware detectado:
-     * - Si corre en emulador: http://10.0.2.2:8080
-     * - Si corre en celular físico: http://192.168.0.180:8080
+     * Retorna la URL por defecto correspondiente al entorno.
+     * Para soportar tanto redes móviles (4G/5G) como cualquier red Wi-Fi externa o local,
+     * prioriza el túnel HTTPS de producción.
      */
-    fun getDefaultUrl(): String = if (isEmulator()) DEFAULT_EMULATOR_URL else DEFAULT_PC_WIFI_URL
+    fun getDefaultUrl(): String = DEFAULT_PRODUCTION_TUNNEL_URL
 
     /**
      * Establece una nueva URL base para la API y la persiste en SharedPreferences.

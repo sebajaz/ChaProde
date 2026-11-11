@@ -323,19 +323,25 @@ fun LoginContent(
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     OutlinedButton(
-                                        onClick = { serverInput = ApiConfig.DEFAULT_EMULATOR_URL },
-                                        modifier = Modifier.weight(1f)
+                                        onClick = { serverInput = ApiConfig.DEFAULT_PRODUCTION_TUNNEL_URL },
+                                        modifier = Modifier.weight(1.2f)
                                     ) {
-                                        Text("Emulador", fontSize = 11.sp)
+                                        Text("🌐 4G/Nube", fontSize = 10.sp, color = ChaProdeSuccess)
                                     }
                                     OutlinedButton(
                                         onClick = { serverInput = ApiConfig.DEFAULT_PC_WIFI_URL },
                                         modifier = Modifier.weight(1f)
                                     ) {
-                                        Text("PC Wi-Fi", fontSize = 11.sp)
+                                        Text("Wi-Fi PC", fontSize = 10.sp)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { serverInput = ApiConfig.DEFAULT_EMULATOR_URL },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Emulador", fontSize = 10.sp)
                                     }
                                 }
                             }
