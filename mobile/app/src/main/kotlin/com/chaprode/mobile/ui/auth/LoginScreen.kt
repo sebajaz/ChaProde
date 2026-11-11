@@ -1,21 +1,28 @@
 package com.chaprode.mobile.ui.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -26,11 +33,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chaprode.mobile.data.remote.ApiConfig
+import com.chaprode.mobile.ui.components.ButtonVariant
 import com.chaprode.mobile.ui.components.ChaProdeButton
+import com.chaprode.mobile.ui.components.ChaProdeLogo
 import com.chaprode.mobile.ui.components.ChaProdeTextField
+import com.chaprode.mobile.ui.theme.*
 
 /**
- * Pantalla Stateful: maneja el ViewModel y las navegaciones
+ * Pantalla Stateful: maneja el ViewModel y las navegaciones de autenticación.
  */
 @Composable
 fun LoginScreen(
@@ -54,7 +65,8 @@ fun LoginScreen(
 }
 
 /**
- * Pantalla Stateless: puramente declarativa, ideal para testing y Previews en Android Studio
+ * Pantalla Stateless: implementa el diseño visual de Figma Make (Fondo con glow ambiental,
+ * tarjeta con borde de 24dp, logo en gradiente y pie de seguridad).
  */
 @Composable
 fun LoginContent(
@@ -65,50 +77,71 @@ fun LoginContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0F172A))
-            .padding(24.dp),
+            .background(ChaProdeBg)
+            .drawBehind {
+                // Brillo ambiental superior derecho (Sky Blue)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ChaProdeSky.copy(alpha = 0.20f), Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.95f, size.height * 0.05f),
+                        radius = size.width * 0.65f
+                    )
+                )
+                // Brillo ambiental inferior izquierdo (Gold)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ChaProdeGold.copy(alpha = 0.16f), Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.05f, size.height * 0.95f),
+                        radius = size.width * 0.70f
+                    )
+                )
+            }
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+                .widthIn(max = 440.dp)
+                .verticalScroll(rememberScrollState())
+                .border(1.dp, ChaProdeBorder, RoundedCornerShape(24.dp)),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            colors = CardDefaults.cardColors(containerColor = ChaProdeSurface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(28.dp),
+                    .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header / Logo
-                Text(
-                    text = "🏆 ChaProde",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFFFBBF24),
-                    textAlign = TextAlign.Center
-                )
+                // Eyebrow / Kicker de bienvenida
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(bottom = 18.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(ChaProdeSuccess, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "TU PASIÓN, TU PRONÓSTICO",
+                        color = ChaProdeSky,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.2.sp
+                    )
+                }
 
-                Text(
-                    text = "Pronósticos Deportivos",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF38BDF8),
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+                // Logotipo oficial estilizado
+                ChaProdeLogo()
 
-                Text(
-                    text = "Iniciá sesión para predecir los partidos y competir en la tabla de posiciones.",
-                    fontSize = 13.sp,
-                    color = Color(0xFF94A3B8),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 28.dp)
-                )
+                Spacer(modifier = Modifier.height(28.dp))
 
-                // Input Usuario / Email
+                // Campo Usuario / Email
                 ChaProdeTextField(
                     value = state.usernameOrEmail,
                     onValueChange = { onEvent(AuthUiEvent.OnUsernameOrEmailChanged(it)) },
@@ -122,7 +155,7 @@ fun LoginContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Input Contraseña
+                // Campo Contraseña con botón de mostrar/ocultar
                 ChaProdeTextField(
                     value = state.password,
                     onValueChange = { onEvent(AuthUiEvent.OnPasswordChanged(it)) },
@@ -134,7 +167,7 @@ fun LoginContent(
                             Icon(
                                 imageVector = if (state.isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                 contentDescription = if (state.isPasswordVisible) "Ocultar contraseña" else "Mostrar contraseña",
-                                tint = Color(0xFF94A3B8)
+                                tint = ChaProdeMuted
                             )
                         }
                     },
@@ -154,7 +187,7 @@ fun LoginContent(
                             .fillMaxWidth()
                             .padding(top = 16.dp),
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFEF4444).copy(alpha = 0.15f)
+                        color = ChaProdeDanger.copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = state.errorMessage,
@@ -167,25 +200,27 @@ fun LoginContent(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(26.dp))
 
-                // Botón Iniciar Sesión
+                // Botón Iniciar Sesión con gradiente CTA y flecha lateral
                 ChaProdeButton(
                     text = "Iniciar Sesión",
+                    variant = ButtonVariant.Primary,
+                    trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
                     isLoading = state.isLoading,
                     enabled = state.isLoginButtonEnabled,
                     onClick = { onEvent(AuthUiEvent.OnLoginClicked) }
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Enlace a Registro
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "¿No tenés una cuenta? ",
-                        color = Color(0xFF94A3B8),
+                        text = "¿No tienes una cuenta? ",
+                        color = ChaProdeMuted,
                         fontSize = 13.sp
                     )
                     TextButton(
@@ -193,19 +228,45 @@ fun LoginContent(
                         contentPadding = PaddingValues(0.dp)
                     ) {
                         Text(
-                            text = "Registrate acá",
-                            color = Color(0xFF38BDF8),
-                            fontWeight = FontWeight.Bold,
+                            text = "Regístrate aquí",
+                            color = ChaProdeSky,
+                            fontWeight = FontWeight.ExtraBold,
                             fontSize = 13.sp
                         )
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Pie de tarjeta: Sello de seguridad (Figma Make reference: .login-card__footer)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(width = 0.5.dp, color = ChaProdeBorder.copy(alpha = 0.6f), shape = RoundedCornerShape(8.dp))
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = ChaProdeSubtle,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Datos protegidos y pronósticos seguros",
+                        color = ChaProdeSubtle,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Configuración de Servidor Backend (Cambio dinámico entre Emulador y Dispositivo Físico)
+                // Diálogo de configuración del Servidor (Preservado para depuración)
                 var showServerDialog by remember { mutableStateOf(false) }
-                var currentServerUrl by remember { mutableStateOf(com.chaprode.mobile.data.remote.ApiConfig.BASE_URL) }
+                var currentServerUrl by remember { mutableStateOf(ApiConfig.BASE_URL) }
                 var serverInput by remember { mutableStateOf(currentServerUrl) }
 
                 TextButton(
@@ -217,7 +278,7 @@ fun LoginContent(
                 ) {
                     Text(
                         text = "⚙️ Servidor: $currentServerUrl",
-                        color = Color(0xFF64748B),
+                        color = ChaProdeSubtle,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center
                     )
@@ -231,7 +292,7 @@ fun LoginContent(
                             Column {
                                 Text(
                                     "Selecciona o escribe la IP de tu servidor backend:",
-                                    color = Color(0xFF94A3B8),
+                                    color = ChaProdeMuted,
                                     fontSize = 12.sp,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
@@ -246,13 +307,13 @@ fun LoginContent(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     OutlinedButton(
-                                        onClick = { serverInput = com.chaprode.mobile.data.remote.ApiConfig.DEFAULT_EMULATOR_URL },
+                                        onClick = { serverInput = ApiConfig.DEFAULT_EMULATOR_URL },
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Text("Emulador", fontSize = 11.sp)
                                     }
                                     OutlinedButton(
-                                        onClick = { serverInput = com.chaprode.mobile.data.remote.ApiConfig.DEFAULT_PC_WIFI_URL },
+                                        onClick = { serverInput = ApiConfig.DEFAULT_PC_WIFI_URL },
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Text("PC Wi-Fi", fontSize = 11.sp)
@@ -263,8 +324,8 @@ fun LoginContent(
                         confirmButton = {
                             Button(
                                 onClick = {
-                                    com.chaprode.mobile.data.remote.ApiConfig.setBaseUrl(serverInput)
-                                    currentServerUrl = com.chaprode.mobile.data.remote.ApiConfig.BASE_URL
+                                    ApiConfig.setBaseUrl(serverInput)
+                                    currentServerUrl = ApiConfig.BASE_URL
                                     showServerDialog = false
                                 }
                             ) {
@@ -273,10 +334,10 @@ fun LoginContent(
                         },
                         dismissButton = {
                             TextButton(onClick = { showServerDialog = false }) {
-                                Text("Cancelar", color = Color(0xFF94A3B8))
+                                Text("Cancelar", color = ChaProdeMuted)
                             }
                         },
-                        containerColor = Color(0xFF1E293B)
+                        containerColor = ChaProdeSurface
                     )
                 }
             }
@@ -291,34 +352,6 @@ fun LoginScreenPreview() {
         state = AuthUiState(
             usernameOrEmail = "seba",
             password = "password123"
-        ),
-        onEvent = {},
-        onNavigateToRegister = {}
-    )
-}
-
-@Preview(name = "Login Cargando", showBackground = true, backgroundColor = 0xFF0F172A)
-@Composable
-fun LoginScreenLoadingPreview() {
-    LoginContent(
-        state = AuthUiState(
-            usernameOrEmail = "seba",
-            password = "password123",
-            isLoading = true
-        ),
-        onEvent = {},
-        onNavigateToRegister = {}
-    )
-}
-
-@Preview(name = "Login con Error", showBackground = true, backgroundColor = 0xFF0F172A)
-@Composable
-fun LoginScreenErrorPreview() {
-    LoginContent(
-        state = AuthUiState(
-            usernameOrEmail = "seba",
-            password = "wrong",
-            errorMessage = "Credenciales incorrectas. Verifica tu usuario y contraseña."
         ),
         onEvent = {},
         onNavigateToRegister = {}
