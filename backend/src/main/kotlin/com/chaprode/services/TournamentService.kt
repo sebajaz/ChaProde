@@ -5,8 +5,11 @@ import com.chaprode.providers.FootballDataProvider
 import com.chaprode.providers.JsonSeedFootballDataProvider
 import com.chaprode.repositories.MatchRepository
 import com.chaprode.repositories.TournamentRepository
+import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import java.util.*
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 class TournamentService(
     private val tournamentRepository: TournamentRepository = TournamentRepository(),
@@ -134,5 +137,42 @@ class TournamentService(
             codigoExterno = request.codigoExterno
         )
         return id.toString()
+    }
+
+    /**
+     * Asegura que todos los partidos en estado PENDIENTE tengan fechas futuras válidas
+     * para que los usuarios puedan pronosticar con cualquier tiempo de anticipación (horas, días o semanas),
+     * cumpliendo la regla de que se bloquean únicamente 15 minutos antes de su inicio.
+     */
+    suspend fun ensureFuturePendingMatches(): Int {
+        val now = Clock.System.now()
+        val pendingMatches = matchRepository.getPendingOrLiveMatches()
+            .filter { it.estado == "PENDIENTE" }
+
+        val expiredMatches = pendingMatches.filter { match ->
+            try {
+                val dt = Instant.parse(match.fechaPartido)
+                dt < now.plus(30.minutes)
+            } catch (e: Exception) {
+                true
+            }
+        }
+
+        if (expiredMatches.isEmpty()) {
+            return 0
+        }
+
+        // Escalonamiento de partidos a futuro para permitir pronósticos con anticipación
+        val hourOffsets = listOf(4L, 8L, 24L, 28L, 48L, 72L, 96L, 120L, 144L, 168L, 240L, 360L, 500L, 720L)
+        var updatedCount = 0
+
+        expiredMatches.forEachIndexed { index, match ->
+            val offsetHours = if (index < hourOffsets.size) hourOffsets[index] else (24L * (index + 1))
+            val futureDate = now.plus(offsetHours.hours)
+            matchRepository.updateMatchSchedule(UUID.fromString(match.id), futureDate)
+            updatedCount++
+        }
+
+        return updatedCount
     }
 }

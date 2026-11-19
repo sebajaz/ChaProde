@@ -129,6 +129,16 @@ class MatchRepository {
         }
     }
 
+    /**
+     * Actualiza la fecha y hora de programación de un partido.
+     * Utilizado para asegurar fechas activas y permitir pronósticos con anticipación.
+     */
+    suspend fun updateMatchSchedule(partidoId: UUID, nuevaFecha: Instant): Unit = dbQuery {
+        PartidosTable.update({ PartidosTable.id eq partidoId }) {
+            it[PartidosTable.fechaPartido] = nuevaFecha
+        }
+    }
+
     suspend fun getMatchByExternalCode(codigoExterno: String): MatchDto? = dbQuery {
         val localEquipos = EquiposTable.alias("local_equipos")
         val visitanteEquipos = EquiposTable.alias("visitante_equipos")

@@ -58,8 +58,13 @@ fun Application.module() {
                     log.info("Base de datos vacía. Sembrando datos iniciales del Mundial 2026...")
                     tournamentService.seedData()
                 }
+                // Asegura que los partidos pendientes tengan fechas futuras válidas para permitir pronósticos con anticipación
+                val rescheduled = tournamentService.ensureFuturePendingMatches()
+                if (rescheduled > 0) {
+                    log.info("Reprogramación automática: {} partidos pendientes ajustados con fechas futuras para permitir pronósticos con anticipación.", rescheduled)
+                }
             } catch (e: Exception) {
-                log.warn("Auto-semilla de datos iniciales omitida: {}", e.message)
+                log.warn("Auto-semilla o reprogramación de fechas omitida: {}", e.message)
             }
         }
     } catch (e: Exception) {

@@ -12,7 +12,8 @@ import kotlin.time.Duration.Companion.minutes
 
 /**
  * Servicio de lógica de negocio para Pronósticos:
- * Implementa la regla crítica de bloqueo 5 minutos antes del inicio del cotejo
+ * Permite cargar pronósticos con cualquier tiempo de anticipación (días, semanas o meses)
+ * e implementa la regla crítica de bloqueo 15 minutos antes del inicio del cotejo
  * calculada con la hora del reloj del servidor (UTC).
  */
 class PredictionService(
@@ -23,7 +24,8 @@ class PredictionService(
 
     /**
      * Valida y persiste o actualiza un pronóstico (upsert) para un partido.
-     * Rechaza la operación si el partido ya inició o si faltan menos de 5 minutos.
+     * Permite cargar con anticipación ilimitada, pero rechaza la operación si el partido ya inició
+     * o si faltan 15 minutos o menos para el inicio del partido.
      */
     suspend fun submitPrediction(userId: String, request: SubmitPredictionRequest): PredictionDto {
         if (request.golesLocal < 0 || request.golesLocal > 99 ||
@@ -50,13 +52,15 @@ class PredictionService(
             throw IllegalArgumentException("No se pueden cargar pronósticos en partidos que ya iniciaron o finalizaron.")
         }
 
-        // Regla de los 5 minutos en hora del servidor
+        // Regla de los 15 minutos en hora del servidor:
+        // Se puede pronosticar con toda la anticipación que se desee,
+        // pero faltando 15 minutos para el pitazo inicial se bloquea la carga.
         val matchTime = Instant.parse(match.fechaPartido)
         val serverNow = Clock.System.now()
-        val cutoffTime = matchTime.minus(5.minutes)
+        val cutoffTime = matchTime.minus(15.minutes)
 
         if (serverNow >= cutoffTime) {
-            throw IllegalArgumentException("Los pronósticos para este partido cerraron 5 minutos antes de su inicio.")
+            throw IllegalArgumentException("Los pronósticos para este partido cerraron 15 minutos antes de su inicio.")
         }
 
         return predictionRepository.upsertPrediction(
@@ -107,7 +111,7 @@ class PredictionService(
 
         return matches.map { match ->
             val matchTime = Instant.parse(match.fechaPartido)
-            val cutoffTime = matchTime.minus(5.minutes)
+            val cutoffTime = matchTime.minus(15.minutes)
             val isClosed = serverNow >= cutoffTime || match.estado != "PENDIENTE"
             val remainingSeconds = cutoffTime.epochSeconds - serverNow.epochSeconds
             val remainingMinutes = if (remainingSeconds > 0) remainingSeconds / 60 else 0
